@@ -1,0 +1,12 @@
+*/__pycache__/
+.DS_Store
+*.pyc
+*.pyo
+*.pyd
+.idea/
+.ropeproject/
+*.geany
+.vscode/
+*.log
+.env/
+*.report
