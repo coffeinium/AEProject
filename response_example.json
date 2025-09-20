@@ -1,0 +1,165 @@
+{
+    "status": "success",
+    "response": {
+        "type": "company_search",
+        "data": null
+    },
+    "ml_data": {
+        "intent": "company_search",
+        "confidence": 0.95,
+        "entities": {
+            "name": "ООО ГОВНО ПРОТИВ МОЧИ"
+        }
+    }
+}
+
+{
+    "status": "success",
+    "response": {
+        "type": "contract_search",
+        "data": null
+    },
+    "ml_data": {
+        "intent": "contract_search",
+        "confidence": 0.95,
+        "entities": {
+            "contract_id": 210293850,
+            "contract_amount": 129996.70000,
+            "contract_date": "2025-09-16 10:55:58.493",
+            "category_pp_first_position": null,
+            "customer_name": "ГОСУДАРСТВЕННОЕ ПРОФЕССИОНАЛЬНОЕ ОБРАЗОВАТЕЛЬНОЕ УЧРЕЖДЕНИЕ \"КУЗБАССКИЙ ТРАНСПОРТНО-ТЕХНОЛОГИЧЕСКИЙ ТЕХНИКУМ\"",
+            "customer_inn": 4211008542,
+            "supplier_name": "ИП ШКУРКО МАКСИМ ВАЛЕРЬЕВИЧ",
+            "supplier_inn": 420533631807,
+            "law_basis": "44-ФЗ"
+        }
+    }
+}
+
+{
+    "status": "success",
+    "response": {
+        "type": "session_search",
+        "data": null
+    },
+    "ml_data": {
+        "intent": "session_search",
+        "confidence": 0.95,
+        "entities": {
+        "session_name": "Фильтры очистки воды  для нужд эндоскопического отделения филиала «Великолукский межрайонный» ГБУЗ ПО «ПОКБ»",
+        "session_id": 10044030,
+        "session_amount": 23974.86000,
+        "session_created_date": "2025-09-16 14:38:20.607",
+        "session_completed_date": "2025-09-16 17:38:21.503",
+        "category_pp_first_position": null,
+        "customer_name": "ГОСУДАРСТВЕННОЕ БЮДЖЕТНОЕ УЧРЕЖДЕНИЕ ЗДРАВООХРАНЕНИЯ ПСКОВСКОЙ ОБЛАСТИ \"ПСКОВСКАЯ ОБЛАСТНАЯ КЛИНИЧЕСКАЯ БОЛЬНИЦА\"",
+        "customer_inn": 6027024000,
+        "supplier_name": "ООО \"ВЕРИТАС\"",
+        "supplier_inn": 7730305047,
+        "law_basis": "44-ФЗ"
+        }
+    }
+}
+
+{
+    "status": "success",
+    "response": {
+        "type": "session_search",
+        "data": null
+    },
+    "ml_data": {
+        "intent": "session_search",
+        "confidence": 0.95,
+        "entities": {
+        "session_name": "Фильтры очистки воды  для нужд эндоскопического отделения филиала «Великолукский межрайонный» ГБУЗ ПО «ПОКБ»",
+        "session_id": 10044030,
+        "session_amount": 23974.86000,
+        "session_created_date": "2025-09-16 14:38:20.607",
+        "session_completed_date": "2025-09-16 17:38:21.503",
+        "category_pp_first_position": null,
+        "customer_name": "ГОСУДАРСТВЕННОЕ БЮДЖЕТНОЕ УЧРЕЖДЕНИЕ ЗДРАВООХРАНЕНИЯ ПСКОВСКОЙ ОБЛАСТИ \"ПСКОВСКАЯ ОБЛАСТНАЯ КЛИНИЧЕСКАЯ БОЛЬНИЦА\"",
+        "customer_inn": 6027024000,
+        "supplier_name": "ООО \"ВЕРИТАС\"",
+        "supplier_inn": 7730305047,
+        "law_basis": "44-ФЗ"
+        }
+    }
+}
+
+{
+    "status": "success",
+    "response": {
+        "type": "create_session",
+        "data": null
+    },
+    "ml_data": {
+        "intent": "create_session",
+        "confidence": 0.95,
+        "entities": {
+        "session_name": "Фильтры очистки воды  для нужд эндоскопического отделения филиала «Великолукский межрайонный» ГБУЗ ПО «ПОКБ»",
+        "session_id": 10044030,
+        "session_amount": 23974.86000,
+        "session_created_date": "2025-09-16 14:38:20.607",
+        "session_completed_date": "2025-09-16 17:38:21.503",
+        "category_pp_first_position": null,
+        "customer_name": "ГОСУДАРСТВЕННОЕ БЮДЖЕТНОЕ УЧРЕЖДЕНИЕ ЗДРАВООХРАНЕНИЯ ПСКОВСКОЙ ОБЛАСТИ \"ПСКОВСКАЯ ОБЛАСТНАЯ КЛИНИЧЕСКАЯ БОЛЬНИЦА\"",
+        "customer_inn": 6027024000,
+        "supplier_name": "ООО \"ВЕРИТАС\"",
+        "supplier_inn": 7730305047,
+        "law_basis": "44-ФЗ"
+        }
+    }
+}
+
+{
+    "status": "success",
+    "response": {
+        "type": "create_contract",
+        "data": null
+    },
+    "ml_data": {
+        "intent": "create_contract",
+        "confidence": 0.95,
+        "entities": {
+            "contract_id": 210293850,
+            "contract_amount": 129996.70000,
+            "contract_date": "2025-09-16 10:55:58.493",
+            "category_pp_first_position": null,
+            "customer_name": "ГОСУДАРСТВЕННОЕ ПРОФЕССИОНАЛЬНОЕ ОБРАЗОВАТЕЛЬНОЕ УЧРЕЖДЕНИЕ \"КУЗБАССКИЙ ТРАНСПОРТНО-ТЕХНОЛОГИЧЕСКИЙ ТЕХНИКУМ\"",
+            "customer_inn": 4211008542,
+            "supplier_name": "ИП ШКУРКО МАКСИМ ВАЛЕРЬЕВИЧ",
+            "supplier_inn": 420533631807,
+            "law_basis": "44-ФЗ"
+        }
+    }
+}
+
+{
+    "status": "success",
+    "response": {
+        "type": "create_company_profile",
+        "data": null
+    },
+    "ml_data": {
+        "intent": "create_company_profile",
+        "confidence": 0.95,
+        "entities": {
+            "company_name": "ООО ГОВНО ПРОТИВ МОЧИ",
+            "company_inn": 1234567890,
+            "company_ogrn": 123456789012345
+        }
+    }
+}
+
+{
+    "status": "error",
+    "response": {
+        "type": "error",
+        "data": "Описание ошибки"
+    },
+    "ml_data": {
+        "intent": "error",
+        "confidence": null,
+        "entities": {}
+    }
+}
