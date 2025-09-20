@@ -31,6 +31,11 @@ class LevenshteinCalculator:
         self.logger = logger
         self.threshold = max(0.0, min(1.0, threshold))
         
+        Utils.writelog(
+            logger=self.logger,
+            level="DEBUG",
+            message=f"{self.__class__.__name__} инициализирован с порогом {self.threshold}"
+        )
     
     def calculate_distance(self, s1: str, s2: str, case_sensitive: bool = False) -> int:
         """
@@ -83,6 +88,12 @@ class LevenshteinCalculator:
             
             distance = previous_row[-1]
             
+            Utils.writelog(
+                logger=self.logger,
+                level="DEBUG",
+                message=f"Расстояние Левенштейна между '{s1}' и '{s2}': {distance}"
+            )
+            
             return distance
             
         except Exception as e:
@@ -120,6 +131,12 @@ class LevenshteinCalculator:
             
             similarity = 1.0 - (distance / max_length)
             
+            Utils.writelog(
+                logger=self.logger,
+                level="DEBUG",
+                message=f"Схожесть между '{s1}' и '{s2}': {similarity:.4f}"
+            )
+            
             return similarity
             
         except Exception as e:
@@ -150,6 +167,11 @@ class LevenshteinCalculator:
         """
         try:
             if not candidates:
+                Utils.writelog(
+                    logger=self.logger,
+                    level="WARNING",
+                    message="Пустой список кандидатов для поиска"
+                )
                 return None, 0.0
             
             best_match = None
@@ -164,6 +186,13 @@ class LevenshteinCalculator:
                 if similarity > best_score and similarity >= self.threshold:
                     best_score = similarity
                     best_match = candidate
+            
+            Utils.writelog(
+                logger=self.logger,
+                level="INFO" if best_match else "WARNING",
+                message=f"Поиск '{query}': {'найдено' if best_match else 'не найдено'} "
+                       f"{'(' + best_match + ', схожесть: ' + str(round(best_score, 4)) + ')' if best_match else ''}"
+            )
             
             return best_match, best_score
             
@@ -214,6 +243,12 @@ class LevenshteinCalculator:
             
             # Ограничиваем количество результатов
             results = matches[:limit]
+            
+            Utils.writelog(
+                logger=self.logger,
+                level="DEBUG",
+                message=f"Поиск '{query}': найдено {len(results)} совпадений из {len(candidates)} кандидатов"
+            )
             
             return results
             
@@ -277,6 +312,12 @@ class LevenshteinCalculator:
                 'corrections_count': len(corrections)
             }
             
+            Utils.writelog(
+                logger=self.logger,
+                level="DEBUG",
+                message=f"Исправление текста: {len(corrections)} исправлений из {len(words)} слов"
+            )
+            
             return result
             
         except Exception as e:
@@ -296,6 +337,12 @@ class LevenshteinCalculator:
         """
         old_threshold = self.threshold
         self.threshold = max(0.0, min(1.0, new_threshold))
+        
+        Utils.writelog(
+            logger=self.logger,
+            level="DEBUG",
+            message=f"Порог схожести изменен с {old_threshold} на {self.threshold}"
+        )
     
     def get_statistics(self) -> Dict[str, Any]:
         """

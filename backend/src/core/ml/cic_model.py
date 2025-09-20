@@ -12,14 +12,14 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score
 
 from ...services.applogger import Logger
 from ...base.utils import Utils
-from .levenshtein import LevenshteinCalculator
+from .submodules.levenshtein import LevenshteinCalculator
 
 
-class AsyncMLModel:
+class ConfigurableIntentClassifier:
     """
     Гибкая асинхронная ML модель для классификации намерений с расширенными возможностями конфигурации.
     
@@ -37,7 +37,7 @@ class AsyncMLModel:
         ...     'create_ks': 'Создание КС',
         ...     'search_contract': 'Поиск контрактов'
         ... }
-        >>> model = AsyncMLModel(logger=logger, intent_mapping=intents)
+        >>> model = ConfigurableIntentClassifier(logger=logger, intent_mapping=intents)
         >>> await model.initialize()
         >>> 
         >>> # Простое обучение
@@ -64,7 +64,7 @@ class AsyncMLModel:
         ...     'deadline': [r'до\s+(\d{1,2}\.\d{1,2}\.\d{4})']
         ... }
         >>> 
-        >>> model = AsyncMLModel(
+        >>> model = ConfigurableIntentClassifier(
         ...     logger=logger,
         ...     intent_mapping=custom_intents,
         ...     correction_dictionary=custom_dictionary,
@@ -173,7 +173,7 @@ class AsyncMLModel:
         Utils.writelog(
             logger=self.logger,
             level="DEBUG",
-            message=f"AsyncMLModel инициализирован: намерений={len(self.intent_mapping)}, "
+            message=f"{self.__class__.__name__} инициализирован: намерений={len(self.intent_mapping)}, "
                    f"словарь={len(self.correction_dictionary)}, сущностей={len(self.entity_patterns)}"
         )
     
@@ -344,50 +344,18 @@ class AsyncMLModel:
             df['text_processed'] = processed_texts
             
             # Разделение данных
-            unique_classes = len(df['intent'].unique())
-            total_samples = len(df)
-            
-            # Проверяем, достаточно ли данных для разделения
-            min_samples_needed = unique_classes * 2  # Минимум по 2 примера на класс
-            
-            if validation_split and total_samples >= min_samples_needed:
-                # Корректируем test_size если он не задан или слишком большой
-                actual_test_size = test_size or self.model_config['test_size']
-                
-                # Убеждаемся, что в тестовой выборке будет достаточно примеров
-                min_test_samples = unique_classes
-                max_test_samples = total_samples - unique_classes  # Оставляем минимум по 1 на класс для обучения
-                
-                calculated_test_samples = int(total_samples * actual_test_size)
-                
-                if calculated_test_samples < min_test_samples:
-                    actual_test_size = min_test_samples / total_samples
-                elif calculated_test_samples > max_test_samples:
-                    actual_test_size = max_test_samples / total_samples
-                
-                Utils.writelog(
-                    logger=self.logger,
-                    level="DEBUG",
-                    message=f"Разделение данных: {total_samples} примеров, {unique_classes} классов, test_size={actual_test_size:.2f}"
-                )
-                
+            if validation_split and len(df) >= 4:
                 X_train, X_test, y_train, y_test = await asyncio.get_event_loop().run_in_executor(
                     None,
                     lambda: train_test_split(
                         df['text_processed'], 
                         df['intent'], 
-                        test_size=actual_test_size, 
+                        test_size=test_size, 
                         random_state=42,
-                        stratify=df['intent'] if unique_classes > 1 else None
+                        stratify=df['intent'] if len(df['intent'].unique()) > 1 else None
                     )
                 )
             else:
-                Utils.writelog(
-                    logger=self.logger,
-                    level="INFO",
-                    message=f"Недостаточно данных для разделения ({total_samples} примеров, {unique_classes} классов). "
-                           f"Используем все данные для обучения без валидации"
-                )
                 X_train, y_train = df['text_processed'], df['intent']
                 X_test, y_test = None, None
             
