@@ -1,14 +1,77 @@
-version: '3.8'
 services:
-  app:
-    build: .
-    container_name: ae-project
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: ae-project-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-aeproject_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - ae-project-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-aeproject_dev}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: ae-project-backend
     env_file:
       - .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-aeproject_dev}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
     ports:
       - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - backend_logs:/app/src/logs
     networks:
-      - default
+      - ae-project-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    command: python main.py
+
+  # Frontend Development Server
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: ae-project-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - ae-project-network
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  backend_logs:
+    driver: local
+
 networks:
-  default:
-    driver: bridge 
+  ae-project-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16 
