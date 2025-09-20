@@ -1,6 +1,4 @@
-// src/components/DocumentForm/DocumentForm.tsx
 import React, { useMemo, useState, useEffect } from 'react';
-import LikeDislike from '@/components/LikeDislike/LikeDislike';
 import './documentForm.css';
 
 export type BackendEnvelope = {
@@ -21,7 +19,8 @@ type Props = {
   envelope?: BackendEnvelope | null;
   initial?: DocumentData;
   onSubmit: (data: any) => void;
-  onCancel: () => void;
+  onCancel: () => void;          // оставлен для совместимости (кнопки в футере модалки)
+  formId?: string;               // id формы для внешнего сабмита из модалки
 };
 
 const isNil = (v: any) => v === null || v === undefined;
@@ -30,7 +29,7 @@ const asText = (v: any) => (isEmpty(v) ? '' : String(v));
 const asDate = (v: any) => (isEmpty(v) ? '' : String(v).slice(0, 10));
 const asMoney = (v: any) => (isEmpty(v) ? '' : String(v));
 
-/* UI */
+/* UI helpers */
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <div className="th-section">
     <div className="th-section__title">{title}</div>
@@ -82,7 +81,7 @@ function Field({
   );
 }
 
-/* ===== общие группы (НЕ entities) ===== */
+/* ===== Общие группы (не entities) ===== */
 function SystemGroup({
   status,
   onChange,
@@ -148,7 +147,7 @@ function MLGroup({
   );
 }
 
-/* ===== Entities (известные поля для красивого порядка) ===== */
+/* ===== Entities (известные поля для порядка) ===== */
 const COMPANY_FIELDS: Array<{ key: string; label: string; type?: 'text' | 'textarea' }> = [
   { key: 'company_name', label: 'Наименование' },
   { key: 'name', label: 'Альтернативное наименование' },
@@ -216,6 +215,7 @@ function EntitiesGroup({
   const orderedVisible = sorted.filter(
     (f) => !exclude.has(f.key) && !isEmpty(entities[f.key])
   );
+
   const extra = Object.keys(entities)
     .filter((k) => !exclude.has(k) && orderedVisible.findIndex((f) => f.key === k) === -1 && !isEmpty(entities[k]))
     .map((k) => ({ key: k, label: k, type: 'text' as const }));
@@ -240,7 +240,7 @@ function EntitiesGroup({
   );
 }
 
-/* Прочие ключи верхнего уровня */
+/* Прочие ключи верхнего уровня (если внезапно появятся) */
 function OtherRootGroup({
   envelope,
   onChange,
@@ -271,7 +271,7 @@ function OtherRootGroup({
   );
 }
 
-/* ===== ОБЯЗАТЕЛЬНЫЕ ПОЛЯ ПО ТИПАМ (добавлено) ===== */
+/* ===== Обязательные поля по типам (фиксированные) ===== */
 type ReqField = { key: string; label: string; type?: 'text' | 'number' | 'money' | 'date' | 'textarea' };
 
 function requiredByType(normalized: string): ReqField[] {
@@ -320,15 +320,15 @@ function requiredByType(normalized: string): ReqField[] {
   return [];
 }
 
-/* ===== Fallback (нет envelope) ===== */
+/* ===== Fallback: когда нет envelope вообще ===== */
 function GenericCreateForm({
   initial,
   onSubmit,
-  onCancel,
+  formId,
 }: {
   initial?: DocumentData;
   onSubmit: (data: DocumentData) => void;
-  onCancel: () => void;
+  formId?: string;
 }) {
   const [form, setForm] = useState<DocumentData>({
     ...(initial ?? {}),
@@ -341,7 +341,7 @@ function GenericCreateForm({
   const change = (name: string, value: string) => setForm((s) => ({ ...s, [name]: value }));
 
   return (
-    <form className="th-form" onSubmit={(e) => { e.preventDefault(); onSubmit(form); }}>
+    <form id={formId} className="th-form" onSubmit={(e) => { e.preventDefault(); onSubmit(form); }}>
       <Section title="Документ">
         <Row>
           <Field label="Название" name="title" value={form.title || ''} onChange={change} />
@@ -353,28 +353,21 @@ function GenericCreateForm({
         </Row>
         <Field label="Заметки" name="notes" type="textarea" value={form.notes || ''} onChange={change} />
       </Section>
-
-      <div className="th-actions">
-        <LikeDislike onRate={(v) => console.log('rate:', v)} />
-        <div className="th-actions__spacer" />
-        <button type="button" className="th-btn th-btn--ghost" onClick={onCancel}>Закрыть</button>
-        <button type="submit" className="th-btn th-btn--primary">Создать</button>
-      </div>
     </form>
   );
 }
 
 /* ===== Основной компонент ===== */
-export default function DocumentForm({ envelope, initial, onSubmit, onCancel }: Props) {
+export default function DocumentForm({ envelope, initial, onSubmit, onCancel, formId }: Props) {
   const typeRaw = envelope?.response?.type || envelope?.ml_data?.intent || '';
   const normalized = useMemo(() => String(typeRaw).toLowerCase(), [typeRaw]);
   const entities = envelope?.ml_data?.entities || {};
 
   if (!envelope) {
-    return <GenericCreateForm initial={initial} onSubmit={onSubmit} onCancel={onCancel} />;
+    return <GenericCreateForm formId={formId} initial={initial} onSubmit={onSubmit} />;
   }
 
-  // обязательные поля (всегда рендерим)
+  /* обязательные поля — всегда рендерим; предзаполняем, если есть */
   const req = useMemo(() => requiredByType(normalized), [normalized]);
 
   const buildReqInit = () =>
@@ -386,13 +379,11 @@ export default function DocumentForm({ envelope, initial, onSubmit, onCancel }: 
         f.type === 'number' ? asText(raw) :
         f.type === 'textarea' ? asText(raw) :
         asText(raw);
-      acc[f.key] = val; // даже если пусто — поле рендерим
+      acc[f.key] = val; // даже если пусто — поле нужно отрендерить
       return acc;
     }, {});
 
   const [requiredState, setRequiredState] = useState<Record<string, string>>(buildReqInit());
-
-  // если сменился тип/данные — пересобрать обязательные поля
   useEffect(() => {
     setRequiredState(buildReqInit());
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -405,8 +396,8 @@ export default function DocumentForm({ envelope, initial, onSubmit, onCancel }: 
     e.preventDefault();
     onSubmit({
       __doc_type: normalized,
-      required: requiredState,     // значения из обязательного блока
-      entities,                    // сырые entities (остальное)
+      required: requiredState,
+      entities,
       status: envelope.status,
       response: envelope.response,
       ml_data: { intent: envelope.ml_data?.intent, confidence: envelope.ml_data?.confidence },
@@ -416,7 +407,7 @@ export default function DocumentForm({ envelope, initial, onSubmit, onCancel }: 
   const excludeKeys = useMemo(() => req.map((f) => f.key), [req]);
 
   return (
-    <form className="th-form" onSubmit={submitAll}>
+    <form id={formId} className="th-form" onSubmit={submitAll}>
       {/* Обязательные поля */}
       {req.length > 0 && (
         <Section title="Обязательные поля">
@@ -435,12 +426,12 @@ export default function DocumentForm({ envelope, initial, onSubmit, onCancel }: 
         </Section>
       )}
 
-      {/* Остальные блоки оставляем как есть */}
+      {/* Системные/Response/ML */}
       <SystemGroup status={envelope.status} onChange={() => {}} />
       <ResponseGroup response={envelope.response} onChange={() => {}} />
       <MLGroup ml={envelope.ml_data} onChange={() => {}} />
 
-      {/* Entities, но без дублирования обязательных ключей */}
+      {/* Entities без дублирования обязательных ключей */}
       <EntitiesGroup
         type={normalized}
         entities={entities}
@@ -448,14 +439,8 @@ export default function DocumentForm({ envelope, initial, onSubmit, onCancel }: 
         onChange={() => {}}
       />
 
+      {/* Если появятся поля на корне, не входящие в стандарт */}
       <OtherRootGroup envelope={envelope as any} onChange={() => {}} />
-
-      <div className="th-actions">
-        <LikeDislike onRate={(v) => console.log('rate:', v)} />
-        <div className="th-actions__spacer" />
-        <button type="button" className="th-btn th-btn--ghost" onClick={onCancel}>Закрыть</button>
-        <button type="submit" className="th-btn th-btn--primary">Создать</button>
-      </div>
     </form>
   );
 }

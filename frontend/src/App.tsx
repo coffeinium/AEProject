@@ -1,4 +1,3 @@
-// src/App.tsx
 import React from 'react';
 import './app.css';
 
@@ -88,6 +87,8 @@ export default function App() {
     return 'Создание документа';
   }, [envelopeForForm]);
 
+  const FORM_ID = 'doc-form';
+
   return (
     <div className="page">
       <header className="topbar">
@@ -103,20 +104,22 @@ export default function App() {
           onCreate={handleCreate}
           onSelectSuggestion={(s) => setPicked(s)}
         />
-      </main>
+      </main>      
 
       <Modal
         open={openModal}
         onClose={() => setOpenModal(false)}
         title={modalTitle}
+        width={840}
+        height="80vh"
+        formId={FORM_ID}
+        onRate={(v) => console.log('rate:', v)}
       >
         <DocumentForm
+          formId={FORM_ID}
           envelope={envelopeForForm}
           initial={initialDoc || undefined}
-          onSubmit={(data) => {
-            console.log('CREATE DOCUMENT', data);
-            setOpenModal(false);
-          }}
+          onSubmit={(data) => { console.log('CREATE DOCUMENT', data); setOpenModal(false); }}
           onCancel={() => setOpenModal(false)}
         />
       </Modal>

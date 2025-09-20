@@ -1,57 +1,82 @@
-.th-search-wrapper { position: relative; width: 100%; max-width: 680px; }
+.th-search-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 680px;
+}
 
+/* строка поиска — ТЕПЕРЬ опорный контейнер для выпадашки */
 .th-search {
-  display: flex; align-items: center; gap: 10px;
-  background: var(--th-surface); border: 1px solid var(--th-border);
-  border-radius: var(--th-radius); padding: 10px 10px 10px 14px; box-shadow: var(--th-shadow);
+  position: relative;                 /* якорь для .th-suggestions */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--th-surface);
+  border: 1px solid var(--th-border);
+  border-radius: var(--th-radius);
+  padding: 10px 10px 10px 14px;
+  box-shadow: var(--th-shadow);
 }
-.th-search__icon { width: 18px; height: 18px; color: var(--th-muted); flex: 0 0 auto; }
-.th-clear__icon { width: 16px; height: 16px; }
-.th-search__input { flex: 1; background: transparent; border: none; outline: none; color: var(--th-text); font-size: 15px; }
-
-.th-search__btn { background: var(--th-primary); color: #fff; font-weight: 600; border: none; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
-.th-search__btn:disabled { opacity: .55; cursor: not-allowed; }
-
-.th-search__clear {
-  display: flex; align-items: center; justify-content: center;
-  background: transparent; border: none; padding: 4px; cursor: pointer; color: var(--th-muted);
-}
-.th-search__clear:hover { color: var(--th-text); }
 
 .th-search:focus-within { box-shadow: var(--th-focus), var(--th-shadow); border-color: transparent; }
 
-.th-suggestions {
-  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
-  background: var(--th-surface); border: 1px solid var(--th-border);
-  border-radius: var(--th-radius); box-shadow: var(--th-shadow);
-  list-style: none; margin: 0; padding: 4px 0; z-index: 50;
-}
-.th-suggestions li { padding: 8px 12px; cursor: pointer; color: var(--th-text); }
-.th-suggestions li:hover { background: var(--th-border); }
+.th-search__icon { width: 18px; height: 18px; color: var(--th-muted); flex: 0 0 auto; }
+.th-clear__icon { width: 16px; height: 16px; }
 
+.th-search__input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--th-text);
+  font-size: 15px;
+}
+
+.th-search__clear,
 .th-search__create {
   display: flex; align-items: center; justify-content: center;
   background: transparent; border: none; padding: 4px; cursor: pointer; color: var(--th-muted);
 }
-.th-search__create:hover { color: var(--th-text); }
+.th-search__clear:hover, .th-search__create:hover { color: var(--th-text); }
 
-/* мелкие утилиты для строк подсказок */
-.th-suggestion__row { display: flex; align-items: center; gap: 8px; }
-.th-suggestion__label { flex: 1; }
-
+/* выпадающий список — позиционируется от .th-search */
 .th-suggestions {
   position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  max-height: 300px;  /* ограничение по высоте */
-  overflow-y: auto;   /* скролл */
+  top: calc(100% + 4px);               /* сразу под формой */
+  left: 0; right: 0;
+  max-height: 300px;
+  overflow-y: auto;
   background: var(--th-surface);
   border: 1px solid var(--th-border);
   border-radius: var(--th-radius);
   box-shadow: var(--th-shadow);
   list-style: none;
-  margin: 0;
-  padding: 4px 0;
-  z-index: 50;
+  margin: 0; padding: 4px 0;
+  z-index: 1000;                       /* гарантированно поверх истории */
 }
+
+.th-suggestions li { padding: 8px 12px; cursor: pointer; color: var(--th-text); }
+.th-suggestions li:hover, .th-suggestions li.is-active { background: var(--th-border); }
+
+.th-suggestion__row { display: flex; align-items: center; gap: 8px; }
+.th-suggestion__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.th-suggestion__type { flex: 0 0 auto; font-size: 12px; color: var(--th-muted); background: rgba(0,0,0,.04); border-radius: 6px; padding: 2px 6px; }
+
+/* история (ниже формы) */
+.th-history {
+  position: relative;
+  z-index: 1;
+  margin-top: 8px;
+  border: 1px solid var(--th-border);
+  border-radius: var(--th-radius);
+  background: var(--th-surface);
+  box-shadow: var(--th-shadow);
+}
+
+.th-history__header { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--th-border); }
+.th-history__title { font-weight: 600; color: var(--th-text); }
+.th-history__reset { margin-left: auto; background: transparent; border: none; color: var(--th-muted); cursor: pointer; padding: 4px 6px; }
+.th-history__reset:hover { color: var(--th-text); }
+
+.th-history__list { max-height: 160px; overflow-y: auto; list-style: none; margin: 0; padding: 6px 0; }
+.th-history__item { padding: 6px 10px; cursor: pointer; color: var(--th-text); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+.th-history__item:hover { background: var(--th-border); }
