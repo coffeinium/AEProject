@@ -3,3 +3,4 @@ uvicorn[standard]
 redis[asyncio]
 jinja2
 rich
+pandas
