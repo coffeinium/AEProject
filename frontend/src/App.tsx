@@ -41,18 +41,45 @@ export default function App() {
 
   // Ищем envelope подходящего типа под выбранную подсказку
   const envelopeForForm = React.useMemo<BackendEnvelope | null>(() => {
-    if (!envelopes?.length) return null;
-    const pickedType = picked?.payload?.__type?.toString()?.toLowerCase();
-    if (pickedType) {
-      const found =
-        envelopes.find((e) => (e.response?.type ?? e.ml_data?.intent ?? '')
-          .toString()
-          .toLowerCase() === pickedType) || null;
-      if (found) return found;
-    }
-    // иначе берём первый
-    return envelopes[0] ?? null;
+  if (!envelopes?.length) return null;
+
+  const typeOf = (e: BackendEnvelope) =>
+    (e.response?.type ?? e.ml_data?.intent ?? '').toString().toLowerCase();
+
+  const groupOf = (t: string) =>
+    t.startsWith('company') ? 'company' :
+    t.startsWith('contract') ? 'contract' :
+    t.startsWith('session') ? 'session' : t;
+
+  const pickedType = picked?.payload?.__type?.toString()?.toLowerCase();
+  if (pickedType) {
+    // 1) точное совпадение
+    const exact = envelopes.find(e => typeOf(e) === pickedType);
+    if (exact) return exact;
+
+    // 2) совпадение по группе (company/contract/session)
+    const g = groupOf(pickedType);
+    const byGroup = envelopes.find(e => groupOf(typeOf(e)) === g);
+    if (byGroup) return byGroup;
+
+    // 3) совпадение по сигнатуре entities
+    const sig: Record<string, string[]> = {
+      company: ['company_name','name','company_inn','company_ogrn'],
+      contract: ['contract_id','contract_amount','customer_name','supplier_name'],
+      session:  ['session_name','session_id','session_amount','customer_name','supplier_name'],
+    };
+    const byEntities = envelopes.find(e => {
+      const ents = e.ml_data?.entities || {};
+      return (sig[g] || []).some(k => k in ents);
+    });
+    if (byEntities) return byEntities;
+  }
+
+  // иначе — первый
+  return envelopes[0] ?? null;
   }, [envelopes, picked]);
+
+
 
   const modalTitle = React.useMemo(() => {
     if (envelopeForForm) {
@@ -92,10 +119,6 @@ export default function App() {
           }}
           onCancel={() => setOpenModal(false)}
         />
-
-        <div style={{ marginTop: 12 }}>
-          <LikeDislike variant="inline" onRate={(v) => console.log('rate:', v)} />
-        </div>
       </Modal>
     </div>
   );

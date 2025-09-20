@@ -1,15 +1,12 @@
 /* src/components/DocumentForm/documentForm.css */
 
-.th-form {
-  display: grid;
-  gap: 16px;
-}
+.th-form { display: grid; gap: 16px; }
 
 .th-section {
-  background: #ffffff;
+  background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  padding: 12px;
+  padding: 14px;
 }
 
 .th-section__title {
@@ -19,36 +16,19 @@
   margin-bottom: 10px;
 }
 
-.th-section__body {
-  display: grid;
-  gap: 12px;
-}
+.th-section__body { display: grid; gap: 12px; }
 
 .th-form__row {
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+@media (max-width: 720px) { .th-form__row { grid-template-columns: 1fr; } }
 
-@media (max-width: 720px) {
-  .th-form__row {
-    grid-template-columns: 1fr;
-  }
-}
+.th-field { display: grid; gap: 6px; }
+.th-field--block { grid-column: 1 / -1; }
 
-.th-field {
-  display: grid;
-  gap: 6px;
-}
-
-.th-field--block {
-  width: 100%;
-}
-
-.th-field__label {
-  font-size: 12px;
-  color: #6b7280;
-}
+.th-field__label { font-size: 12px; color: #6b7280; }
 
 .th-field input,
 .th-field textarea {
@@ -60,35 +40,18 @@
   font-size: 14px;
   outline: none;
 }
-
 .th-field input:focus,
 .th-field textarea:focus {
   border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-}
-
-.th-grid-2 {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-@media (max-width: 720px) {
-  .th-grid-2 {
-    grid-template-columns: 1fr;
-  }
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .15);
 }
 
 .th-actions {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 4px;
 }
-
-.th-actions__spacer {
-  flex: 1;
-}
+.th-actions__spacer { flex: 1; }
 
 .th-btn {
   appearance: none;
@@ -98,27 +61,9 @@
   font-size: 14px;
   cursor: pointer;
 }
+.th-btn--ghost { background: #fff; border-color: #e5e7eb; color: #374151; }
+.th-btn--ghost:hover { background: #f9fafb; }
+.th-btn--primary { background: #2563eb; color: #fff; }
+.th-btn--primary:hover { background: #1d4ed8; }
 
-.th-btn--ghost {
-  background: #ffffff;
-  border-color: #e5e7eb;
-  color: #374151;
-}
-
-.th-btn--ghost:hover {
-  background: #f9fafb;
-}
-
-.th-btn--primary {
-  background: #2563eb;
-  color: #fff;
-}
-
-.th-btn--primary:hover {
-  background: #1d4ed8;
-}
-
-.th-error {
-  color: #b91c1c;
-  font-weight: 600;
-}
+.th-error { color: #b91c1c; font-weight: 600; }

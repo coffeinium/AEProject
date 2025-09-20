@@ -1,16 +1,14 @@
 // src/components/DocumentForm/DocumentForm.tsx
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import LikeDislike from '@/components/LikeDislike/LikeDislike';
 import './documentForm.css';
 
-// единый конверт ответа
 export type BackendEnvelope = {
   status: 'success' | 'error';
   response: { type: string; data: any };
   ml_data: { intent: string; confidence: number | null; entities: Record<string, any> };
 };
 
-// внешний API компонента
 export type DocumentData = {
   title?: string;
   customer?: string;
@@ -20,476 +18,444 @@ export type DocumentData = {
 };
 
 type Props = {
-  envelope?: BackendEnvelope | null; // если есть — рисуем конкретную форму по типу
-  initial?: DocumentData;            // используется в fallback-форме
+  envelope?: BackendEnvelope | null;
+  initial?: DocumentData;
   onSubmit: (data: any) => void;
   onCancel: () => void;
 };
 
-// ===== УТИЛЫ =====
-const isEmpty = (v: any) => v === null || v === undefined || v === '';
-const money = (v: any) => (isEmpty(v) ? '' : String(v));
-const date = (v: any) => (isEmpty(v) ? '' : String(v).slice(0, 10));
-const text = (v: any) => (isEmpty(v) ? '' : String(v));
+const isNil = (v: any) => v === null || v === undefined;
+const isEmpty = (v: any) => isNil(v) || v === '';
+const asText = (v: any) => (isEmpty(v) ? '' : String(v));
+const asDate = (v: any) => (isEmpty(v) ? '' : String(v).slice(0, 10));
+const asMoney = (v: any) => (isEmpty(v) ? '' : String(v));
 
-const entriesOfEntities = (e: Record<string, any>, used: string[]) =>
-  Object.entries(e || {}).filter(([k, v]) => !used.includes(k) && !isEmpty(v));
-
+/* UI */
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <div className="th-section">
     <div className="th-section__title">{title}</div>
     <div className="th-section__body">{children}</div>
   </div>
 );
+
 const Row: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="th-form__row">{children}</div>
 );
-const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <label className="th-field">
-    <span className="th-field__label">{label}</span>
-    {children}
-  </label>
-);
 
-// ===== ФОРМЫ =====
+function Field({
+  label,
+  name,
+  type = 'text',
+  value,
+  onChange,
+}: {
+  label: string;
+  name: string;
+  type?: 'text' | 'date' | 'money' | 'textarea' | 'number';
+  value: string;
+  onChange: (name: string, value: string) => void;
+}) {
+  if (type === 'textarea') {
+    return (
+      <label className="th-field th-field--block">
+        <span className="th-field__label">{label}</span>
+        <textarea
+          rows={4}
+          value={value}
+          onChange={(e) => onChange(name, e.target.value)}
+          placeholder={label}
+        />
+      </label>
+    );
+  }
+  const inputType = type === 'date' ? 'date' : type === 'number' ? 'number' : 'text';
+  return (
+    <label className="th-field">
+      <span className="th-field__label">{label}</span>
+      <input
+        type={inputType}
+        value={value}
+        onChange={(e) => onChange(name, e.target.value)}
+        placeholder={label}
+      />
+    </label>
+  );
+}
 
-// company_search / create_company_profile
-const CompanyForm: React.FC<Omit<Props, 'initial'>> = ({ envelope, onSubmit, onCancel }) => {
-  const e = envelope?.ml_data?.entities || {};
-  const [form, setForm] = useState({
-    company_name: text(e.company_name ?? e.name),
-    company_inn: text(e.company_inn),
-    company_ogrn: text(e.company_ogrn),
-    comment: '',
-  });
-  const change =
-    (k: keyof typeof form) =>
-    (ev: React.ChangeEvent<HTMLInputElement>) =>
-      setForm((s) => ({ ...s, [k]: ev.target.value }));
+/* ===== общие группы (НЕ entities) ===== */
+function SystemGroup({
+  status,
+  onChange,
+}: {
+  status?: string;
+  onChange: (name: string, value: string) => void;
+}) {
+  if (isEmpty(status)) return null;
+  return (
+    <Section title="Системные">
+      <Row>
+        <Field label="status" name="__status" value={asText(status)} onChange={onChange} />
+      </Row>
+    </Section>
+  );
+}
 
-  const usedKeys = ['company_name', 'name', 'company_inn', 'company_ogrn'];
-  const rest = entriesOfEntities(e, usedKeys);
+function ResponseGroup({
+  response,
+  onChange,
+}: {
+  response?: { type?: string; data?: any };
+  onChange: (name: string, value: string) => void;
+}) {
+  if (!response) return null;
+  const t = asText(response.type);
+  const d = isNil(response.data)
+    ? ''
+    : typeof response.data === 'string'
+    ? response.data
+    : JSON.stringify(response.data);
+  if (isEmpty(t) && isEmpty(d)) return null;
+  return (
+    <Section title="Response">
+      <Row>
+        {!isEmpty(t) && <Field label="type" name="__response.type" value={t} onChange={onChange} />}
+        {!isEmpty(d) && (
+          <Field label="data" name="__response.data" type="textarea" value={d} onChange={onChange} />
+        )}
+      </Row>
+    </Section>
+  );
+}
+
+function MLGroup({
+  ml,
+  onChange,
+}: {
+  ml?: { intent?: string; confidence?: number | null };
+  onChange: (name: string, value: string) => void;
+}) {
+  if (!ml) return null;
+  const i = asText(ml.intent);
+  const c = isNil(ml.confidence) ? '' : String(ml.confidence);
+  if (isEmpty(i) && isEmpty(c)) return null;
+  return (
+    <Section title="ML">
+      <Row>
+        {!isEmpty(i) && <Field label="intent" name="__ml.intent" value={i} onChange={onChange} />}
+        {!isEmpty(c) && <Field label="confidence" name="__ml.confidence" value={c} onChange={onChange} />}
+      </Row>
+    </Section>
+  );
+}
+
+/* ===== Entities (известные поля для красивого порядка) ===== */
+const COMPANY_FIELDS: Array<{ key: string; label: string; type?: 'text' | 'textarea' }> = [
+  { key: 'company_name', label: 'Наименование' },
+  { key: 'name', label: 'Альтернативное наименование' },
+  { key: 'company_inn', label: 'ИНН' },
+  { key: 'company_ogrn', label: 'ОГРН' },
+  { key: 'company_kpp', label: 'КПП' },
+  { key: 'company_address', label: 'Юр. адрес', type: 'textarea' },
+  { key: 'company_post_address', label: 'Почтовый адрес', type: 'textarea' },
+  { key: 'company_phone', label: 'Телефон' },
+  { key: 'company_email', label: 'Email' },
+  { key: 'company_site', label: 'Сайт' },
+];
+
+const CONTRACT_FIELDS: Array<{ key: string; label: string; type?: 'text' | 'date' | 'money' | 'textarea' }> = [
+  { key: 'contract_id', label: 'ID контракта' },
+  { key: 'contract_date', label: 'Дата', type: 'date' },
+  { key: 'contract_amount', label: 'Сумма', type: 'money' },
+  { key: 'law_basis', label: 'Правовая база' },
+  { key: 'category_pp_first_position', label: 'Категория (первая позиция)' },
+  { key: 'customer_name', label: 'Заказчик (наименование)' },
+  { key: 'customer_inn', label: 'Заказчик (ИНН)' },
+  { key: 'supplier_name', label: 'Поставщик (наименование)' },
+  { key: 'supplier_inn', label: 'Поставщик (ИНН)' },
+];
+
+const SESSION_FIELDS: Array<{ key: string; label: string; type?: 'text' | 'date' | 'money' | 'textarea' }> = [
+  { key: 'session_name', label: 'Название сессии' },
+  { key: 'session_id', label: 'ID сессии' },
+  { key: 'session_amount', label: 'Сумма', type: 'money' },
+  { key: 'session_created_date', label: 'Создана', type: 'date' },
+  { key: 'session_completed_date', label: 'Завершена', type: 'date' },
+  { key: 'law_basis', label: 'Правовая база' },
+  { key: 'category_pp_first_position', label: 'Категория (первая позиция)' },
+  { key: 'customer_name', label: 'Заказчик (наименование)' },
+  { key: 'customer_inn', label: 'Заказчик (ИНН)' },
+  { key: 'supplier_name', label: 'Поставщик (наименование)' },
+  { key: 'supplier_inn', label: 'Поставщик (ИНН)' },
+];
+
+function normByType(type: string | undefined, v: any) {
+  if (type === 'date') return asDate(v);
+  if (type === 'money') return asMoney(v);
+  return asText(v);
+}
+
+function EntitiesGroup({
+  type,
+  entities,
+  excludeKeys = [],
+  onChange,
+}: {
+  type: string;
+  entities: Record<string, any>;
+  excludeKeys?: string[];
+  onChange: (name: string, value: string) => void;
+}) {
+  const sorted =
+    type.startsWith('company') ? COMPANY_FIELDS :
+    type.startsWith('contract') ? CONTRACT_FIELDS :
+    type.startsWith('session') ? SESSION_FIELDS :
+    [];
+
+  const exclude = new Set(excludeKeys);
+
+  const orderedVisible = sorted.filter(
+    (f) => !exclude.has(f.key) && !isEmpty(entities[f.key])
+  );
+  const extra = Object.keys(entities)
+    .filter((k) => !exclude.has(k) && orderedVisible.findIndex((f) => f.key === k) === -1 && !isEmpty(entities[k]))
+    .map((k) => ({ key: k, label: k, type: 'text' as const }));
+
+  if (orderedVisible.length === 0 && extra.length === 0) return null;
 
   return (
-    <form
-      className="th-form"
-      onSubmit={(ev) => {
-        ev.preventDefault();
-        onSubmit({ type: 'company', ...form });
-      }}
-    >
-      <Section title="Реквизиты">
-        <Row>
-          <Field label="Наименование">
-            <input
-              value={form.company_name}
-              onChange={change('company_name')}
-              placeholder="ООО «Ромашка»"
-            />
-          </Field>
-          <Field label="ИНН">
-            <input
-              value={form.company_inn}
-              onChange={change('company_inn')}
-              placeholder="1234567890"
-            />
-          </Field>
-        </Row>
-        <Row>
-          <Field label="ОГРН">
-            <input
-              value={form.company_ogrn}
-              onChange={change('company_ogrn')}
-              placeholder="1234567890123"
-            />
-          </Field>
-          <Field label="Комментарий">
-            <input value={form.comment} onChange={change('comment')} placeholder="Примечание" />
-          </Field>
-        </Row>
-      </Section>
-
-      {rest.length > 0 && (
-        <Section title="Дополнительные поля">
-          <div className="th-grid-2">
-            {rest.map(([k, v]) => (
-              <label className="th-field" key={k}>
-                <span className="th-field__label">{k}</span>
-                <input defaultValue={String(v)} />
-              </label>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      <div className="th-actions">
-        <LikeDislike onRate={(v) => console.log('rate:', v)} />
-        <div className="th-actions__spacer" />
-        <button type="button" className="th-btn th-btn--ghost" onClick={onCancel}>
-          Закрыть
-        </button>
-        <button type="submit" className="th-btn th-btn--primary">
-          Создать
-        </button>
-      </div>
-    </form>
+    <Section title="Entities">
+      <Row>
+        {[...orderedVisible, ...extra].map((f) => (
+          <Field
+            key={f.key}
+            name={`entities.${f.key}`}
+            label={f.label}
+            type={(f.type as any) ?? 'text'}
+            value={normByType(f.type, entities[f.key])}
+            onChange={onChange}
+          />
+        ))}
+      </Row>
+    </Section>
   );
-};
+}
 
-// contract_search / create_contract
-const ContractForm: React.FC<Omit<Props, 'initial'>> = ({ envelope, onSubmit, onCancel }) => {
-  const e = envelope?.ml_data?.entities || {};
-  const [form, setForm] = useState({
-    contract_id: text(e.contract_id),
-    contract_amount: money(e.contract_amount),
-    contract_date: date(e.contract_date),
-    law_basis: text(e.law_basis),
-    customer_name: text(e.customer_name),
-    customer_inn: text(e.customer_inn),
-    supplier_name: text(e.supplier_name),
-    supplier_inn: text(e.supplier_inn),
-    notes: '',
-  });
-  const change =
-    (k: keyof typeof form) =>
-    (ev: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      setForm((s) => ({ ...s, [k]: ev.target.value }));
-
-  const usedKeys = [
-    'contract_id',
-    'contract_amount',
-    'contract_date',
-    'law_basis',
-    'customer_name',
-    'customer_inn',
-    'supplier_name',
-    'supplier_inn',
-  ];
-  const rest = entriesOfEntities(e, usedKeys);
+/* Прочие ключи верхнего уровня */
+function OtherRootGroup({
+  envelope,
+  onChange,
+}: {
+  envelope: any;
+  onChange: (name: string, value: string) => void;
+}) {
+  if (!envelope || typeof envelope !== 'object') return null;
+  const exclude = new Set(['status', 'response', 'ml_data']);
+  const other = Object.entries(envelope).filter(([k, v]) => !exclude.has(k) && !isEmpty(v));
+  if (other.length === 0) return null;
 
   return (
-    <form
-      className="th-form"
-      onSubmit={(ev) => {
-        ev.preventDefault();
-        onSubmit({ type: 'contract', ...form });
-      }}
-    >
-      <Section title="Основное">
-        <Row>
-          <Field label="ID контракта">
-            <input value={form.contract_id} onChange={change('contract_id')} placeholder="210293850" />
-          </Field>
-          <Field label="Дата">
-            <input type="date" value={form.contract_date} onChange={change('contract_date')} />
-          </Field>
-        </Row>
-        <Row>
-          <Field label="Сумма">
-            <input value={form.contract_amount} onChange={change('contract_amount')} placeholder="129 996.70" />
-          </Field>
-          <Field label="Правовая база">
-            <input value={form.law_basis} onChange={change('law_basis')} placeholder="44-ФЗ" />
-          </Field>
-        </Row>
-      </Section>
-
-      <Section title="Стороны">
-        <Row>
-          <Field label="Заказчик (наименование)">
-            <input value={form.customer_name} onChange={change('customer_name')} />
-          </Field>
-          <Field label="Заказчик (ИНН)">
-            <input value={form.customer_inn} onChange={change('customer_inn')} />
-          </Field>
-        </Row>
-        <Row>
-          <Field label="Поставщик (наименование)">
-            <input value={form.supplier_name} onChange={change('supplier_name')} />
-          </Field>
-          <Field label="Поставщик (ИНН)">
-            <input value={form.supplier_inn} onChange={change('supplier_inn')} />
-          </Field>
-        </Row>
-      </Section>
-
-      <Section title="Прочее">
-        <label className="th-field th-field--block">
-          <span className="th-field__label">Заметки</span>
-          <textarea rows={3} value={form.notes} onChange={change('notes')} placeholder="Доп. сведения" />
-        </label>
-      </Section>
-
-      {rest.length > 0 && (
-        <Section title="Дополнительные поля">
-          <div className="th-grid-2">
-            {rest.map(([k, v]) => (
-              <label className="th-field" key={k}>
-                <span className="th-field__label">{k}</span>
-                <input defaultValue={String(v)} />
-              </label>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      <div className="th-actions">
-        <LikeDislike onRate={(v) => console.log('rate:', v)} />
-        <div className="th-actions__spacer" />
-        <button type="button" className="th-btn th-btn--ghost" onClick={onCancel}>
-          Закрыть
-        </button>
-        <button type="submit" className="th-btn th-btn--primary">
-          Создать
-        </button>
-      </div>
-    </form>
+    <Section title="Прочее (корень)">
+      <Row>
+        {other.map(([k, v]) => (
+          <Field
+            key={k}
+            label={k}
+            name={`__root.${k}`}
+            type={typeof v === 'number' ? 'number' : 'text'}
+            value={asText(v)}
+            onChange={onChange}
+          />
+        ))}
+      </Row>
+    </Section>
   );
-};
+}
 
-// session_search / create_session
-const SessionForm: React.FC<Omit<Props, 'initial'>> = ({ envelope, onSubmit, onCancel }) => {
-  const e = envelope?.ml_data?.entities || {};
-  const [form, setForm] = useState({
-    session_name: text(e.session_name),
-    session_id: text(e.session_id),
-    session_amount: money(e.session_amount),
-    session_created_date: date(e.session_created_date),
-    session_completed_date: date(e.session_completed_date),
-    law_basis: text(e.law_basis),
-    customer_name: text(e.customer_name),
-    customer_inn: text(e.customer_inn),
-    supplier_name: text(e.supplier_name),
-    supplier_inn: text(e.supplier_inn),
-    notes: '',
-  });
-  const change =
-    (k: keyof typeof form) =>
-    (ev: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      setForm((s) => ({ ...s, [k]: ev.target.value }));
+/* ===== ОБЯЗАТЕЛЬНЫЕ ПОЛЯ ПО ТИПАМ (добавлено) ===== */
+type ReqField = { key: string; label: string; type?: 'text' | 'number' | 'money' | 'date' | 'textarea' };
 
-  const usedKeys = [
-    'session_name',
-    'session_id',
-    'session_amount',
-    'session_created_date',
-    'session_completed_date',
-    'law_basis',
-    'customer_name',
-    'customer_inn',
-    'supplier_name',
-    'supplier_inn',
-  ];
-  const rest = entriesOfEntities(e, usedKeys);
+function requiredByType(normalized: string): ReqField[] {
+  if (normalized === 'create_contract') {
+    return [
+      { key: 'contract_name', label: 'Наименование контракта' },
+      { key: 'customer_name', label: 'Наименование заказчика' },
+      { key: 'customer_inn', label: 'ИНН заказчика' },
+      { key: 'contract_amount', label: 'Сумма', type: 'money' },
+      { key: 'category_pp_first_position', label: 'Категория' },
+      { key: 'law_basis', label: 'Закон' },
+    ];
+  }
+  if (normalized === 'create_session') {
+    return [
+      { key: 'session_name', label: 'Наименование КС' },
+      { key: 'customer_name', label: 'Наименование заказчика' },
+      { key: 'customer_inn', label: 'ИНН заказчика' },
+      { key: 'session_amount', label: 'Сумма', type: 'money' },
+      { key: 'category_pp_first_position', label: 'Категория' },
+      { key: 'law_basis', label: 'Закон' },
+    ];
+  }
+  if (normalized === 'contract_search') {
+    return [{ key: 'contract_id', label: 'ID' }];
+  }
+  if (normalized === 'session_search') {
+    return [{ key: 'session_id', label: 'ID' }];
+  }
+  if (normalized === 'company_search') {
+    return [
+      { key: 'name', label: 'Имя компании' },
+      { key: 'company_inn', label: 'ИНН компании' },
+    ];
+  }
+  if (normalized === 'create_company_profile') {
+    return [
+      { key: 'company_name', label: 'Имя компании' },
+      { key: 'company_inn', label: 'ИНН' },
+      { key: 'company_bik', label: 'БИК' },
+    ];
+  }
+  if (normalized === 'help') {
+    return [{ key: 'help_data', label: 'Данные', type: 'textarea' }];
+  }
+  return [];
+}
 
-  return (
-    <form
-      className="th-form"
-      onSubmit={(ev) => {
-        ev.preventDefault();
-        onSubmit({ type: 'session', ...form });
-      }}
-    >
-      <Section title="Основное">
-        <Row>
-          <Field label="Название сессии">
-            <input
-              value={form.session_name}
-              onChange={change('session_name')}
-              placeholder="Фильтры очистки воды…"
-            />
-          </Field>
-          <Field label="ID сессии">
-            <input value={form.session_id} onChange={change('session_id')} placeholder="10044030" />
-          </Field>
-        </Row>
-        <Row>
-          <Field label="Сумма">
-            <input value={form.session_amount} onChange={change('session_amount')} placeholder="23 974.86" />
-          </Field>
-          <Field label="Правовая база">
-            <input value={form.law_basis} onChange={change('law_basis')} placeholder="44-ФЗ" />
-          </Field>
-        </Row>
-      </Section>
-
-      <Section title="Сроки">
-        <Row>
-          <Field label="Создана">
-            <input
-              type="date"
-              value={form.session_created_date}
-              onChange={change('session_created_date')}
-            />
-          </Field>
-          <Field label="Завершена">
-            <input
-              type="date"
-              value={form.session_completed_date}
-              onChange={change('session_completed_date')}
-            />
-          </Field>
-        </Row>
-      </Section>
-
-      <Section title="Стороны">
-        <Row>
-          <Field label="Заказчик (наименование)">
-            <input value={form.customer_name} onChange={change('customer_name')} />
-          </Field>
-          <Field label="Заказчик (ИНН)">
-            <input value={form.customer_inn} onChange={change('customer_inn')} />
-          </Field>
-        </Row>
-        <Row>
-          <Field label="Поставщик (наименование)">
-            <input value={form.supplier_name} onChange={change('supplier_name')} />
-          </Field>
-          <Field label="Поставщик (ИНН)">
-            <input value={form.supplier_inn} onChange={change('supplier_inn')} />
-          </Field>
-        </Row>
-      </Section>
-
-      <Section title="Прочее">
-        <label className="th-field th-field--block">
-          <span className="th-field__label">Заметки</span>
-          <textarea rows={3} value={form.notes} onChange={change('notes')} placeholder="Доп. сведения" />
-        </label>
-      </Section>
-
-      {rest.length > 0 && (
-        <Section title="Дополнительные поля">
-          <div className="th-grid-2">
-            {rest.map(([k, v]) => (
-              <label className="th-field" key={k}>
-                <span className="th-field__label">{k}</span>
-                <input defaultValue={String(v)} />
-              </label>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      <div className="th-actions">
-        <LikeDislike onRate={(v) => console.log('rate:', v)} />
-        <div className="th-actions__spacer" />
-        <button type="button" className="th-btn th-btn--ghost" onClick={onCancel}>
-          Закрыть
-        </button>
-        <button type="submit" className="th-btn th-btn--primary">
-          Создать
-        </button>
-      </div>
-    </form>
-  );
-};
-
-// fallback (ручное создание)
-const GenericCreateForm: React.FC<{
+/* ===== Fallback (нет envelope) ===== */
+function GenericCreateForm({
+  initial,
+  onSubmit,
+  onCancel,
+}: {
   initial?: DocumentData;
   onSubmit: (data: DocumentData) => void;
   onCancel: () => void;
-}> = ({ initial, onSubmit, onCancel }) => {
+}) {
   const [form, setForm] = useState<DocumentData>({
     ...(initial ?? {}),
-    title: text(initial?.title),
-    customer: text(initial?.customer),
-    price: money(initial?.price),
-    deadline: date(initial?.deadline),
-    notes: text(initial?.notes),
+    title: asText(initial?.title),
+    customer: asText(initial?.customer),
+    price: asMoney(initial?.price),
+    deadline: asDate(initial?.deadline),
+    notes: asText(initial?.notes),
   });
-
-  const change =
-    (k: keyof DocumentData) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      setForm((s) => ({ ...s, [k]: e.target.value }));
+  const change = (name: string, value: string) => setForm((s) => ({ ...s, [name]: value }));
 
   return (
-    <form
-      className="th-form"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit(form);
-      }}
-    >
+    <form className="th-form" onSubmit={(e) => { e.preventDefault(); onSubmit(form); }}>
       <Section title="Документ">
         <Row>
-          <Field label="Название">
-            <input value={form.title || ''} onChange={change('title')} placeholder="Название документа" />
-          </Field>
-          <Field label="Заказчик">
-            <input
-              value={form.customer || ''}
-              onChange={change('customer')}
-              placeholder="Организация / заказчик"
-            />
-          </Field>
+          <Field label="Название" name="title" value={form.title || ''} onChange={change} />
+          <Field label="Заказчик" name="customer" value={form.customer || ''} onChange={change} />
         </Row>
         <Row>
-          <Field label="Стоимость">
-            <input value={form.price || ''} onChange={change('price')} placeholder="1 200 000 ₽" />
-          </Field>
-          <Field label="Срок">
-            <input value={form.deadline || ''} onChange={change('deadline')} placeholder="2025-10-20" />
-          </Field>
+          <Field label="Стоимость" name="price" value={form.price || ''} onChange={change} />
+          <Field label="Срок" name="deadline" value={form.deadline || ''} onChange={change} />
         </Row>
-        <label className="th-field th-field--block">
-          <span className="th-field__label">Заметки</span>
-          <textarea value={form.notes || ''} onChange={change('notes')} rows={4} placeholder="Доп. сведения" />
-        </label>
+        <Field label="Заметки" name="notes" type="textarea" value={form.notes || ''} onChange={change} />
       </Section>
 
       <div className="th-actions">
         <LikeDislike onRate={(v) => console.log('rate:', v)} />
         <div className="th-actions__spacer" />
-        <button type="button" className="th-btn th-btn--ghost" onClick={onCancel}>
-          Закрыть
-        </button>
-        <button type="submit" className="th-btn th-btn--primary">
-          Создать
-        </button>
+        <button type="button" className="th-btn th-btn--ghost" onClick={onCancel}>Закрыть</button>
+        <button type="submit" className="th-btn th-btn--primary">Создать</button>
       </div>
     </form>
   );
-};
+}
 
-// роутер форм
+/* ===== Основной компонент ===== */
 export default function DocumentForm({ envelope, initial, onSubmit, onCancel }: Props) {
-  const type = envelope?.response?.type || envelope?.ml_data?.intent || '';
-  const normalized = useMemo(() => String(type).toLowerCase(), [type]);
+  const typeRaw = envelope?.response?.type || envelope?.ml_data?.intent || '';
+  const normalized = useMemo(() => String(typeRaw).toLowerCase(), [typeRaw]);
+  const entities = envelope?.ml_data?.entities || {};
 
-  if (normalized === 'company_search' || normalized === 'create_company_profile') {
-    return <CompanyForm envelope={envelope} onSubmit={onSubmit} onCancel={onCancel} />;
-  }
-  if (normalized === 'contract_search' || normalized === 'create_contract') {
-    return <ContractForm envelope={envelope} onSubmit={onSubmit} onCancel={onCancel} />;
-  }
-  if (normalized === 'session_search' || normalized === 'create_session') {
-    return <SessionForm envelope={envelope} onSubmit={onSubmit} onCancel={onCancel} />;
+  if (!envelope) {
+    return <GenericCreateForm initial={initial} onSubmit={onSubmit} onCancel={onCancel} />;
   }
 
-  if (normalized === 'error') {
-    const msg = text(envelope?.response?.data ?? 'Ошибка');
-    return (
-      <form
-        className="th-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          onCancel();
-        }}
-      >
-        <Section title="Ошибка">
-          <div className="th-error">{msg}</div>
+  // обязательные поля (всегда рендерим)
+  const req = useMemo(() => requiredByType(normalized), [normalized]);
+
+  const buildReqInit = () =>
+    req.reduce<Record<string, string>>((acc, f) => {
+      const raw = entities[f.key];
+      const val =
+        f.type === 'date' ? asDate(raw) :
+        f.type === 'money' ? asMoney(raw) :
+        f.type === 'number' ? asText(raw) :
+        f.type === 'textarea' ? asText(raw) :
+        asText(raw);
+      acc[f.key] = val; // даже если пусто — поле рендерим
+      return acc;
+    }, {});
+
+  const [requiredState, setRequiredState] = useState<Record<string, string>>(buildReqInit());
+
+  // если сменился тип/данные — пересобрать обязательные поля
+  useEffect(() => {
+    setRequiredState(buildReqInit());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [normalized, entities]);
+
+  const onChangeReq = (name: string, value: string) =>
+    setRequiredState((s) => ({ ...s, [name]: value }));
+
+  const submitAll = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({
+      __doc_type: normalized,
+      required: requiredState,     // значения из обязательного блока
+      entities,                    // сырые entities (остальное)
+      status: envelope.status,
+      response: envelope.response,
+      ml_data: { intent: envelope.ml_data?.intent, confidence: envelope.ml_data?.confidence },
+    });
+  };
+
+  const excludeKeys = useMemo(() => req.map((f) => f.key), [req]);
+
+  return (
+    <form className="th-form" onSubmit={submitAll}>
+      {/* Обязательные поля */}
+      {req.length > 0 && (
+        <Section title="Обязательные поля">
+          <Row>
+            {req.map((f) => (
+              <Field
+                key={f.key}
+                name={f.key}
+                label={f.label}
+                type={f.type ?? 'text'}
+                value={requiredState[f.key] ?? ''}
+                onChange={onChangeReq}
+              />
+            ))}
+          </Row>
         </Section>
-        <div className="th-actions">
-          <button type="button" className="th-btn th-btn--primary" onClick={onCancel}>
-            Закрыть
-          </button>
-        </div>
-      </form>
-    );
-  }
+      )}
 
-  return <GenericCreateForm initial={initial} onSubmit={onSubmit} onCancel={onCancel} />;
+      {/* Остальные блоки оставляем как есть */}
+      <SystemGroup status={envelope.status} onChange={() => {}} />
+      <ResponseGroup response={envelope.response} onChange={() => {}} />
+      <MLGroup ml={envelope.ml_data} onChange={() => {}} />
+
+      {/* Entities, но без дублирования обязательных ключей */}
+      <EntitiesGroup
+        type={normalized}
+        entities={entities}
+        excludeKeys={excludeKeys}
+        onChange={() => {}}
+      />
+
+      <OtherRootGroup envelope={envelope as any} onChange={() => {}} />
+
+      <div className="th-actions">
+        <LikeDislike onRate={(v) => console.log('rate:', v)} />
+        <div className="th-actions__spacer" />
+        <button type="button" className="th-btn th-btn--ghost" onClick={onCancel}>Закрыть</button>
+        <button type="submit" className="th-btn th-btn--primary">Создать</button>
+      </div>
+    </form>
+  );
 }

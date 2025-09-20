@@ -11,8 +11,8 @@ type Suggest = { label: string; payload: any };
 type Props = {
   placeholder?: string;
   onSearch: (q: string) => void | Promise<void>;
-  onCreate: (payload: any) => void;              // открываем модалку ТОЛЬКО по этой кнопке
-  onSelectSuggestion?: (s: Suggest) => void;     // опционально сообщаем наверх, что выбрали подсказку
+  onCreate: (payload: any) => void;
+  onSelectSuggestion?: (s: Suggest) => void;
 };
 
 export default function SearchBar({
@@ -24,20 +24,27 @@ export default function SearchBar({
   const [q, setQ] = useState('');
   const [suggestions, setSuggestions] = useState<Suggest[]>([]);
   const [show, setShow] = useState(false);
-  const [activeIdx, setActiveIdx] = useState<number>(-1); // для клавиатуры
-  const [picked, setPicked] = useState<Suggest | null>(null); // последняя выбранная подсказка
+  const [activeIdx, setActiveIdx] = useState<number>(-1);
+  const [picked, setPicked] = useState<Suggest | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
+  // Флаг, чтобы не перезапускать подсказки сразу после выбора из списка
+  const skipSuggestRef = useRef(false);
+
   // === загрузка подсказок: пробел ИЛИ последний токен >= 2 символов + дебаунс 300мс ===
   useEffect(() => {
-    const controller = new AbortController();
+    // если мы только что выбрали подсказку — пропускаем обновление
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
 
     const lastToken = q.trim().split(/\s+/).pop() || '';
     const shouldFire = lastToken.length >= 2 || (q.endsWith(' ') && q.trim().length > 0);
 
-    const t = setTimeout(async () => {
+    const t = window.setTimeout(async () => {
       if (!shouldFire) {
         setSuggestions([]);
         setShow(false);
@@ -50,14 +57,11 @@ export default function SearchBar({
         setShow(norm.length > 0);
         setActiveIdx(norm.length ? 0 : -1);
       } catch {
-        // ignore
+        /* ignore */
       }
     }, 300);
 
-    return () => {
-      controller.abort();
-      clearTimeout(t);
-    };
+    return () => clearTimeout(t);
   }, [q]);
 
   // закрытие списка по клику вне
@@ -84,16 +88,21 @@ export default function SearchBar({
     const value = q.trim();
     if (!value) return;
     await onSearch(value);
-    setShow(false); // список скрываем, модалку НЕ открываем
+    setShow(false);
   };
 
-  const selectSuggestion = (s: Suggest) => {
-    setQ(s.label);
-    setPicked(s);                 // запоминаем выбранную подсказку
-    onSelectSuggestion?.(s);      // сообщаем наверх (если нужно)
-    // НИКАКОЙ модалки тут — только поиск по клику можно запустить отдельно:
-    // по UX оставим просто выбор текста и скрытие списка
+  // внутри SearchBar.tsx
+  const selectSuggestion = async (s: Suggest) => {
     setShow(false);
+    setActiveIdx(-1);
+    skipSuggestRef.current = true;
+
+    setQ(s.label);
+    setPicked(s);
+    onSelectSuggestion?.(s);
+
+    // ВАЖНО: подтягиваем актуальные envelopes под выбранный пункт
+    await onSearch(s.label);
   };
 
   // клавиатура в инпуте
@@ -101,17 +110,18 @@ export default function SearchBar({
     if (!show || suggestions.length === 0) return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setActiveIdx((i) => (i + 1) % suggestions.length);
-      scrollActiveIntoView((activeIdx + 1) % suggestions.length);
+      const next = (activeIdx + 1) % suggestions.length;
+      setActiveIdx(next);
+      scrollActiveIntoView(next);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setActiveIdx((i) => (i - 1 + suggestions.length) % suggestions.length);
-      scrollActiveIntoView((activeIdx - 1 + suggestions.length) % suggestions.length);
+      const prev = (activeIdx - 1 + suggestions.length) % suggestions.length;
+      setActiveIdx(prev);
+      scrollActiveIntoView(prev);
     } else if (e.key === 'Enter') {
-      // Enter на открытом списке — выбираем подсказку (не открываем модалку)
       if (activeIdx >= 0 && activeIdx < suggestions.length) {
         e.preventDefault();
-        selectSuggestion(suggestions[activeIdx]);
+        selectSuggestion(suggestions[activeIdx]); // выпад. закроется
       }
     } else if (e.key === 'Escape') {
       setShow(false);
@@ -140,8 +150,6 @@ export default function SearchBar({
   };
 
   const createClick = () => {
-    // создаём документ ТОЛЬКО по клику на кнопку "создать"
-    // приоритет: выбранная подсказка -> точное совпадение текста -> первая подсказка -> пустой объект
     const fromPicked = picked?.payload;
     const exact = suggestions.find((s) => s.label === q)?.payload;
     const first = suggestions[0]?.payload;
@@ -202,10 +210,9 @@ export default function SearchBar({
               role="option"
               aria-selected={i === activeIdx}
               className={i === activeIdx ? 'is-active' : undefined}
-              // onMouseDown — чтобы не терять фокус инпута до select
               onMouseDown={(e) => {
-                e.preventDefault();
-                selectSuggestion(s);
+                e.preventDefault();      // не теряем фокус поля
+                selectSuggestion(s);     // список скрываем сразу
               }}
             >
               <div className="th-suggestion__row">
