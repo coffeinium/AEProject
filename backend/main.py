@@ -310,6 +310,32 @@ class AEProjectCore:
         python = sys.executable
         os.execl(python, python, *sys.argv)
 
+    async def _test_ml_model(self):
+        """Тестирование ML модели при запуске"""
+        try:
+            Utils.writelog(
+                logger=self.logger,
+                level="INFO",
+                message="Запуск тестирования ML модели"
+            )
+            
+            # Импортируем и запускаем тест ML модели
+            from example import test_ml_model
+            await test_ml_model()
+            
+            Utils.writelog(
+                logger=self.logger,
+                level="INFO",
+                message="Тестирование ML модели завершено успешно"
+            )
+            
+        except Exception as e:
+            Utils.writelog(
+                logger=self.logger,
+                level="ERROR",
+                message=f"Ошибка тестирования ML модели: {e}"
+            )
+
     async def run(self):
         try:
             Utils.writelog(
@@ -319,6 +345,9 @@ class AEProjectCore:
             )
             
             await self._initialize_storage()
+            
+            # Тестируем ML модель после инициализации storage
+            await self._test_ml_model()
             
             self.app = self._create_app()
             

@@ -11,3 +11,5 @@ asyncpg
 openpyxl
 python-multipart
 python-dateutil
+numpy
+scikit-learn
