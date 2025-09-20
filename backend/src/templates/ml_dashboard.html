@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Dashboard - Тестирование нейросети</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-healthy {
+            background: rgba(46, 204, 113, 0.2);
+            color: #27ae60;
+            border: 2px solid #27ae60;
+        }
+
+        .status-loading {
+            background: rgba(241, 196, 15, 0.2);
+            color: #f39c12;
+            border: 2px solid #f39c12;
+        }
+
+        .status-error {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+            border: 2px solid #e74c3c;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e8e8e8;
+        }
+
+        .section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section h2::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border-radius: 2px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .text-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #4facfe;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+
+        .result-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            border-left: 4px solid #4facfe;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b 0%, #feca57 50%, #48dbfb 100%);
+            transition: width 0.5s ease;
+        }
+
+        .entities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .entity-tag {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e8e8e8;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #4facfe;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+
+        .batch-input {
+            margin-bottom: 10px;
+        }
+
+        .batch-input input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .batch-results {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .batch-item {
+            background: #f8f9fa;
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 3px solid #4facfe;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .error-message {
+            background: #ffe6e6;
+            color: #d63031;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border-left: 4px solid #d63031;
+        }
+
+        .success-message {
+            background: #e8f5e8;
+            color: #00b894;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border-left: 4px solid #00b894;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 ML Dashboard</h1>
+            <p>Тестирование системы классификации намерений</p>
+            <div id="status-indicator" class="status-indicator status-loading">
+                <span class="loading"></span>
+                Проверка состояния...
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Метрики системы -->
+            <div class="section full-width">
+                <h2>📊 Метрики системы</h2>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value" id="total-requests">0</div>
+                        <div class="metric-label">Всего запросов</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="avg-confidence">0.0</div>
+                        <div class="metric-label">Средняя уверенность</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="total-intents">0</div>
+                        <div class="metric-label">Доступных намерений</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="response-time">0ms</div>
+                        <div class="metric-label">Время ответа</div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="confidence-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Одиночное тестирование -->
+            <div class="section">
+                <h2>🎯 Тестирование</h2>
+                <div class="input-group">
+                    <label for="test-input">Введите текст для анализа:</label>
+                    <textarea id="test-input" class="text-input" placeholder="Например: Создай тендер на оборудование 500к"></textarea>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="detailed-mode">
+                    <label for="detailed-mode">Детальный анализ</label>
+                </div>
+                <button class="btn" onclick="predictSingle()">
+                    <span>🔍</span>
+                    Анализировать
+                </button>
+                <div id="single-result"></div>
+            </div>
+
+            <!-- Пакетное тестирование -->
+            <div class="section">
+                <h2>📦 Пакетное тестирование</h2>
+                <div id="batch-inputs">
+                    <div class="batch-input">
+                        <input type="text" placeholder="Текст 1: Создай КС на канцтовары">
+                    </div>
+                    <div class="batch-input">
+                        <input type="text" placeholder="Текст 2: Найди поставщиков мебели">
+                    </div>
+                    <div class="batch-input">
+                        <input type="text" placeholder="Текст 3: Помощь по системе">
+                    </div>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <button class="btn btn-secondary" onclick="addBatchInput()">+ Добавить</button>
+                    <button class="btn" onclick="predictBatch()">
+                        <span>⚡</span>
+                        Анализировать пакет
+                    </button>
+                </div>
+                <div id="batch-results" class="batch-results"></div>
+            </div>
+
+            <!-- Информация о модели -->
+            <div class="section full-width">
+                <h2>ℹ️ Информация о модели</h2>
+                <div id="model-info">
+                    <div class="loading"></div> Загрузка информации о модели...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let totalRequests = 0;
+        let confidenceHistory = [];
+        let responseTimeHistory = [];
+        let confidenceChart;
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            checkModelHealth();
+            loadModelInfo();
+            initChart();
+        });
+
+        // Проверка состояния модели
+        async function checkModelHealth() {
+            try {
+                const startTime = performance.now();
+                const response = await axios.get('/api/ml/health');
+                const endTime = performance.now();
+                
+                const responseTime = Math.round(endTime - startTime);
+                document.getElementById('response-time').textContent = responseTime + 'ms';
+                
+                const statusEl = document.getElementById('status-indicator');
+                statusEl.className = 'status-indicator status-healthy';
+                statusEl.innerHTML = '<span style="color: #27ae60;">●</span> Модель работает';
+                
+                return true;
+            } catch (error) {
+                const statusEl = document.getElementById('status-indicator');
+                statusEl.className = 'status-indicator status-error';
+                statusEl.innerHTML = '<span style="color: #e74c3c;">●</span> Модель недоступна';
+                return false;
+            }
+        }
+
+        // Загрузка информации о модели
+        async function loadModelInfo() {
+            try {
+                const response = await axios.get('/api/ml/info');
+                const info = response.data;
+                
+                document.getElementById('total-intents').textContent = info.intents.length;
+                
+                const infoHtml = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                        <div>
+                            <h3 style="color: #4facfe; margin-bottom: 10px;">Доступные намерения:</h3>
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                ${info.intent_names.map(name => `<span class="entity-tag">${name}</span>`).join('')}
+                            </div>
+                        </div>
+                        <div>
+                            <h3 style="color: #4facfe; margin-bottom: 10px;">Характеристики:</h3>
+                            <p><strong>Обучена:</strong> ${info.is_trained ? '✅ Да' : '❌ Нет'}</p>
+                            <p><strong>Словарь исправлений:</strong> ${info.correction_dictionary_size} слов</p>
+                            <p><strong>Типы сущностей:</strong> ${info.entity_patterns.join(', ')}</p>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('model-info').innerHTML = infoHtml;
+            } catch (error) {
+                document.getElementById('model-info').innerHTML = 
+                    '<div class="error-message">Ошибка загрузки информации о модели: ' + error.message + '</div>';
+            }
+        }
+
+        // Инициализация графика
+        function initChart() {
+            const ctx = document.getElementById('confidence-chart').getContext('2d');
+            confidenceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Уверенность модели',
+                        data: [],
+                        borderColor: '#4facfe',
+                        backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Время ответа (мс)',
+                        data: [],
+                        borderColor: '#ff6b6b',
+                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 1,
+                            title: {
+                                display: true,
+                                text: 'Уверенность'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Время (мс)'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Одиночное предсказание
+        async function predictSingle() {
+            const text = document.getElementById('test-input').value.trim();
+            const detailed = document.getElementById('detailed-mode').checked;
+            
+            if (!text) {
+                alert('Введите текст для анализа');
+                return;
+            }
+
+            const resultEl = document.getElementById('single-result');
+            resultEl.innerHTML = '<div class="loading"></div> Анализируем...';
+
+            try {
+                const startTime = performance.now();
+                const response = await axios.post('/api/ml/predict', {
+                    text: text,
+                    detailed: detailed
+                });
+                const endTime = performance.now();
+                
+                const result = response.data;
+                const responseTime = Math.round(endTime - startTime);
+                
+                updateMetrics(result.confidence, responseTime);
+                displaySingleResult(result, responseTime);
+                
+            } catch (error) {
+                resultEl.innerHTML = '<div class="error-message">Ошибка: ' + error.response?.data?.detail || error.message + '</div>';
+            }
+        }
+
+        // Отображение результата одиночного предсказания
+        function displaySingleResult(result, responseTime) {
+            const confidencePercent = (result.confidence * 100).toFixed(1);
+            const confidenceColor = result.confidence > 0.7 ? '#48dbfb' : result.confidence > 0.4 ? '#feca57' : '#ff6b6b';
+            
+            let entitiesHtml = '';
+            if (Object.keys(result.entities).length > 0) {
+                entitiesHtml = `
+                    <div style="margin-top: 15px;">
+                        <strong>Извлеченные сущности:</strong>
+                        <div class="entities-grid">
+                            ${Object.entries(result.entities).map(([key, value]) => 
+                                `<div class="entity-tag">${key}: ${value}</div>`
+                            ).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            let topPredictionsHtml = '';
+            if (result.top_predictions && result.top_predictions.length > 0) {
+                topPredictionsHtml = `
+                    <div style="margin-top: 15px;">
+                        <strong>Топ-3 варианта:</strong>
+                        ${result.top_predictions.map((pred, index) => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin: 8px 0; padding: 8px; background: #f8f9fa; border-radius: 6px;">
+                                <span>${index + 1}. ${pred.intent_name}</span>
+                                <span style="font-weight: bold; color: #4facfe;">${(pred.probability * 100).toFixed(1)}%</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            const resultHtml = `
+                <div class="result-card">
+                    <div class="result-header">
+                        <h3 style="color: #2c3e50; margin: 0;">${result.intent_name}</h3>
+                        <span style="font-size: 0.9rem; color: #666;">${responseTime}ms</span>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <strong>Исходный текст:</strong> "${result.original_text}"
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <strong>Обработанный:</strong> "${result.processed_text}"
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <strong>Уверенность:</strong> ${confidencePercent}%
+                    </div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" style="width: ${confidencePercent}%; background: ${confidenceColor};"></div>
+                    </div>
+                    ${entitiesHtml}
+                    ${topPredictionsHtml}
+                </div>
+            `;
+            
+            document.getElementById('single-result').innerHTML = resultHtml;
+        }
+
+        // Пакетное предсказание
+        async function predictBatch() {
+            const inputs = document.querySelectorAll('#batch-inputs input');
+            const texts = Array.from(inputs).map(input => input.value.trim()).filter(text => text);
+            
+            if (texts.length === 0) {
+                alert('Введите хотя бы один текст для анализа');
+                return;
+            }
+
+            const resultEl = document.getElementById('batch-results');
+            resultEl.innerHTML = '<div class="loading"></div> Анализируем пакет...';
+
+            try {
+                const startTime = performance.now();
+                const response = await axios.post('/api/ml/predict/batch', {
+                    texts: texts
+                });
+                const endTime = performance.now();
+                
+                const result = response.data;
+                const responseTime = Math.round(endTime - startTime);
+                
+                displayBatchResults(result.results, responseTime);
+                
+                // Обновляем метрики средней уверенности
+                const avgConfidence = result.results.reduce((sum, r) => sum + r.confidence, 0) / result.results.length;
+                updateMetrics(avgConfidence, responseTime);
+                
+            } catch (error) {
+                resultEl.innerHTML = '<div class="error-message">Ошибка: ' + error.response?.data?.detail || error.message + '</div>';
+            }
+        }
+
+        // Отображение результатов пакетного предсказания
+        function displayBatchResults(results, responseTime) {
+            const resultsHtml = results.map((result, index) => {
+                const confidencePercent = (result.confidence * 100).toFixed(1);
+                const confidenceColor = result.confidence > 0.7 ? '#48dbfb' : result.confidence > 0.4 ? '#feca57' : '#ff6b6b';
+                
+                return `
+                    <div class="batch-item">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <strong>${result.intent_name}</strong>
+                            <span style="color: ${confidenceColor}; font-weight: bold;">${confidencePercent}%</span>
+                        </div>
+                        <div style="font-size: 0.9rem; color: #666; margin-bottom: 8px;">
+                            "${result.original_text}"
+                        </div>
+                        <div class="confidence-bar" style="height: 4px;">
+                            <div class="confidence-fill" style="width: ${confidencePercent}%; background: ${confidenceColor};"></div>
+                        </div>
+                        ${Object.keys(result.entities).length > 0 ? 
+                            `<div style="margin-top: 8px; font-size: 0.85rem;">
+                                <strong>Сущности:</strong> ${Object.entries(result.entities).map(([k,v]) => `${k}: ${v}`).join(', ')}
+                            </div>` : ''
+                        }
+                    </div>
+                `;
+            }).join('');
+            
+            const summaryHtml = `
+                <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #00b894;">
+                    <strong>Пакет обработан:</strong> ${results.length} текстов за ${responseTime}ms
+                </div>
+            `;
+            
+            document.getElementById('batch-results').innerHTML = summaryHtml + resultsHtml;
+        }
+
+        // Добавление нового поля для пакетного ввода
+        function addBatchInput() {
+            const container = document.getElementById('batch-inputs');
+            const inputCount = container.children.length + 1;
+            const newInput = document.createElement('div');
+            newInput.className = 'batch-input';
+            newInput.innerHTML = `<input type="text" placeholder="Текст ${inputCount}: ">`;
+            container.appendChild(newInput);
+        }
+
+        // Обновление метрик
+        function updateMetrics(confidence, responseTime) {
+            totalRequests++;
+            confidenceHistory.push(confidence);
+            responseTimeHistory.push(responseTime);
+            
+            // Ограничиваем историю последними 20 запросами
+            if (confidenceHistory.length > 20) {
+                confidenceHistory.shift();
+                responseTimeHistory.shift();
+            }
+            
+            // Обновляем отображение метрик
+            document.getElementById('total-requests').textContent = totalRequests;
+            
+            const avgConfidence = confidenceHistory.reduce((sum, c) => sum + c, 0) / confidenceHistory.length;
+            document.getElementById('avg-confidence').textContent = avgConfidence.toFixed(3);
+            
+            // Обновляем график
+            updateChart();
+        }
+
+        // Обновление графика
+        function updateChart() {
+            const labels = confidenceHistory.map((_, index) => `#${totalRequests - confidenceHistory.length + index + 1}`);
+            
+            confidenceChart.data.labels = labels;
+            confidenceChart.data.datasets[0].data = confidenceHistory;
+            confidenceChart.data.datasets[1].data = responseTimeHistory;
+            confidenceChart.update();
+        }
+    </script>
+</body>
+</html>
