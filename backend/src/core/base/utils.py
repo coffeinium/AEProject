@@ -1,7 +1,9 @@
 from ..services.applogger import Logger
 from typing import Optional
 import inspect
-from datetime import datetime
+from typing import List, Dict, Any
+import pandas as pd
+
 
 class Utils:
     @staticmethod
@@ -83,3 +85,57 @@ class Utils:
                 print(f"[{level}] {message}")
                 
         return True
+    
+    @staticmethod
+    def universal_conventer_xls_to_json(
+        file_path: str,
+        logger: Optional[Logger] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Конвертирует Excel файл с контрактами в JSON формат.
+        
+        Args:
+            file_path (str): Путь к Excel файлу
+            logger (Logger, optional): Объект логгера для записи сообщений
+            
+        Returns:
+            List[Dict[str, Any]]: Список словарей с данными
+                
+        Example:
+            >>> contracts = Utils.universal_conventer_xls_to_json("contracts.xlsx", logger)
+            >>> print(f"Загружено {len(contracts)} записей")
+        """
+        Utils.writelog(
+            logger=logger,
+            level="INFO",
+            message=f"Конвертация Excel файла: {file_path}"
+        )
+        
+        try:
+            df = pd.read_excel(file_path)
+            
+            # Замена NaN значений на None для корректной JSON сериализации
+            df = df.where(pd.notnull(df), None)
+            
+            # Обработка дат
+            date_columns = df.select_dtypes(include=['datetime64']).columns
+            for col in date_columns:
+                df[col] = df[col].dt.strftime('%Y-%m-%d %H:%M:%S').where(df[col].notnull(), None)
+            
+            contracts_data = df.to_dict('records')
+            
+            Utils.writelog(
+                logger=logger,
+                level="INFO",
+                message=f"Конвертировано {len(contracts_data)} записей"
+            )
+            
+            return contracts_data
+            
+        except Exception as e:
+            Utils.writelog(
+                logger=logger,
+                level="ERROR",
+                message=f"Ошибка конвертации {file_path}: {str(e)}"
+            )
+            return []
