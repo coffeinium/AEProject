@@ -1,0 +1,19 @@
+:root{
+  --th-primary: #3b82f6;
+  --th-primary-hover: #2563eb;
+  --th-bg: #0f1115;
+  --th-surface: #161a22;
+  --th-border: #2a2f3a;
+  --th-text: #e5e7eb;
+  --th-muted: #9ca3af;
+  --th-radius: 12px;
+  --th-shadow: 0 6px 18px rgba(0,0,0,.22);
+  --th-focus: 0 0 0 3px rgba(59,130,246,.35);
+}
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body { margin: 0; background: var(--th-bg); color: var(--th-text); font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
+.topbar { height: 56px; display: flex; align-items: center; padding: 0 16px; border-bottom: 1px solid var(--th-border); background: #0c0f14; }
+.brand { font-weight: 700; letter-spacing: .3px; }
+.content { padding: 24px; max-width: 840px; margin: 0 auto; }
+.title { margin: 0 0 16px; font-size: 22px; }
