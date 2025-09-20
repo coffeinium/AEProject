@@ -1,0 +1,14 @@
+.th-modal__backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,.35);
+  display: flex; align-items: center; justify-content: center; z-index: 100;
+}
+.th-modal {
+  background: #fff; color: #111; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.25);
+}
+.th-modal__header { padding: 14px 18px; font-weight: 600; border-bottom: 1px solid #eee; }
+.th-modal__body   { padding: 16px 18px; }
+.th-modal__footer {
+  padding: 12px 18px;
+  border-top: 1px solid #eee;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}

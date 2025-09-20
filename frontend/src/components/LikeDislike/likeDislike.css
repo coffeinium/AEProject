@@ -1,0 +1,29 @@
+.th-rate {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  background: #fff;
+  border: 1px solid #eceff3;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.06);
+}
+
+.th-rate--inline { margin-top: 8px; }
+.th-rate--floating { position: fixed; right: 24px; bottom: 24px; z-index: 200; }
+
+.th-rate__btn {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, transform .05s ease;
+}
+.th-rate__btn:hover { background: #f7f8fa; }
+.th-rate__btn:active { transform: translateY(1px); }
+
+.th-rate__btn.is-active-like   { background: #e6f7ee; border-color: #b7ebc6; }
+.th-rate__btn.is-active-dislike{ background: #fdecec; border-color: #f7bdbd; }
