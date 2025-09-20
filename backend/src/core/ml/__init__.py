@@ -1,7 +1,11 @@
-from .submodules.levenshtein import LevenshteinCalculator
-from .cic_model import ConfigurableIntentClassifier
+from .cic_init import MLCICInitializer
+from .submodules import (
+    LevenshteinCalculator,
+    ConfigurableIntentClassifier
+)
 
 __all__ = [
+    'MLCICInitializer',
     'LevenshteinCalculator',
     'ConfigurableIntentClassifier'
 ]

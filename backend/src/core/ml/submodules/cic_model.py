@@ -16,7 +16,7 @@ from sklearn.metrics import accuracy_score
 
 from ...services.applogger import Logger
 from ...base.utils import Utils
-from .submodules.levenshtein import LevenshteinCalculator
+from .levenshtein import LevenshteinCalculator
 
 
 class ConfigurableIntentClassifier:
@@ -414,10 +414,15 @@ class ConfigurableIntentClassifier:
         """Создание и обучение pipeline с гибкой конфигурацией"""
         config = self.model_config
         
+        # Преобразуем ngram_range из списка в кортеж если нужно
+        ngram_range = config['ngram_range']
+        if isinstance(ngram_range, list):
+            ngram_range = tuple(ngram_range)
+        
         pipeline = Pipeline([
             ('tfidf', TfidfVectorizer(
                 max_features=config['tfidf_max_features'],
-                ngram_range=config['ngram_range'],
+                ngram_range=ngram_range,
                 stop_words=None,
                 lowercase=True,
                 min_df=config['min_df'],

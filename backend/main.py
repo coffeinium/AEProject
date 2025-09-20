@@ -19,7 +19,8 @@ from src.core import (
     EnvReader,
     Logger,
     ReportManager,
-    PostgresStorage
+    PostgresStorage,
+    MLCICInitializer
 )
 
 class AEProjectCore:
@@ -28,13 +29,14 @@ class AEProjectCore:
         (
             self.logger,
             self.report_manager,
-            self.storage
+            self.storage,
+            self.ml_cic_interface
         ) = self._init_main_components()
         
         self.app: Optional[FastAPI] = None
         self.templates: Optional[Jinja2Templates] = None
         
-    def _init_main_components(self) -> tuple[Logger, ReportManager, PostgresStorage]:
+    def _init_main_components(self) -> tuple[Logger, ReportManager, PostgresStorage, MLCICInitializer]:
         try:
             logger_settings = {
                 key.replace('LOGGER_', '').lower(): value
@@ -42,13 +44,20 @@ class AEProjectCore:
                 if key.startswith('LOGGER_')
             }
             
+            ml_cic_settings = {
+                key.replace('AEAPISETTINGS_ML_', '').lower(): value
+                for key, value in self.env.env_data.items()
+                if key.startswith('AEAPISETTINGS_ML_')
+            }
+            
             logger = Logger(**logger_settings)
             report_manager = ReportManager(self.env)
+            ml_cic_interface = MLCICInitializer(**ml_cic_settings, logger=logger)
             
             database_url = getattr(self.env, 'POSTGRES_DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/aeproject_dev')
             postgres_storage = PostgresStorage(database_url, logger)
             
-            return logger, report_manager, postgres_storage
+            return logger, report_manager, postgres_storage, ml_cic_interface
         except Exception as e:
             Utils.writelog(
                 level="CRITICAL",
@@ -90,6 +99,21 @@ class AEProjectCore:
                 level="ERROR",
                 message=f"Ошибка инициализации PostgresStorage: {e}"
         )
+            
+    async def _initialize_ml_cic_interface(self):
+        try:
+            await self.ml_cic_interface.initialize()
+            Utils.writelog(
+                logger=self.logger,
+                level="INFO",
+                message="MLCICInitializer инициализирован"
+            )
+        except Exception as e:
+            Utils.writelog(
+                logger=self.logger,
+                level="ERROR",
+                message=f"Ошибка инициализации MLCICInitializer: {e}"
+            )
 
     def _create_app(self) -> FastAPI:
         app = FastAPI(
@@ -134,7 +158,8 @@ class AEProjectCore:
             "templates": self.templates,
             "logger": self.logger,
             "report_manager": self.report_manager,
-            "storage": self.storage
+            "storage": self.storage,
+            "ml_cic_interface": self.ml_cic_interface
         }
 
     async def _register_middlewares(self, app: FastAPI):
@@ -320,6 +345,8 @@ class AEProjectCore:
             
             await self._initialize_storage()
             
+            await self._initialize_ml_cic_interface()
+                
             self.app = self._create_app()
             
             await self._register_middlewares(self.app)

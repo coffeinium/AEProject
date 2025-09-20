@@ -88,12 +88,6 @@ class LevenshteinCalculator:
             
             distance = previous_row[-1]
             
-            Utils.writelog(
-                logger=self.logger,
-                level="DEBUG",
-                message=f"Расстояние Левенштейна между '{s1}' и '{s2}': {distance}"
-            )
-            
             return distance
             
         except Exception as e:
@@ -130,12 +124,6 @@ class LevenshteinCalculator:
                 return 1.0
             
             similarity = 1.0 - (distance / max_length)
-            
-            Utils.writelog(
-                logger=self.logger,
-                level="DEBUG",
-                message=f"Схожесть между '{s1}' и '{s2}': {similarity:.4f}"
-            )
             
             return similarity
             
@@ -187,13 +175,6 @@ class LevenshteinCalculator:
                     best_score = similarity
                     best_match = candidate
             
-            Utils.writelog(
-                logger=self.logger,
-                level="INFO" if best_match else "WARNING",
-                message=f"Поиск '{query}': {'найдено' if best_match else 'не найдено'} "
-                       f"{'(' + best_match + ', схожесть: ' + str(round(best_score, 4)) + ')' if best_match else ''}"
-            )
-            
             return best_match, best_score
             
         except Exception as e:
@@ -243,12 +224,6 @@ class LevenshteinCalculator:
             
             # Ограничиваем количество результатов
             results = matches[:limit]
-            
-            Utils.writelog(
-                logger=self.logger,
-                level="DEBUG",
-                message=f"Поиск '{query}': найдено {len(results)} совпадений из {len(candidates)} кандидатов"
-            )
             
             return results
             
@@ -312,12 +287,6 @@ class LevenshteinCalculator:
                 'corrections_count': len(corrections)
             }
             
-            Utils.writelog(
-                logger=self.logger,
-                level="DEBUG",
-                message=f"Исправление текста: {len(corrections)} исправлений из {len(words)} слов"
-            )
-            
             return result
             
         except Exception as e:
@@ -335,14 +304,7 @@ class LevenshteinCalculator:
         Args:
             new_threshold (float): Новый порог (0.0 - 1.0)
         """
-        old_threshold = self.threshold
         self.threshold = max(0.0, min(1.0, new_threshold))
-        
-        Utils.writelog(
-            logger=self.logger,
-            level="DEBUG",
-            message=f"Порог схожести изменен с {old_threshold} на {self.threshold}"
-        )
     
     def get_statistics(self) -> Dict[str, Any]:
         """

@@ -9,11 +9,18 @@ from .base import (
 from .storage import (
     PostgresStorage
 )
-
+from .ml import (
+    MLCICInitializer,
+    LevenshteinCalculator,
+    ConfigurableIntentClassifier
+)
 __all__ = [
     "Logger",
     "EnvReader",
     "ReportManager",
     "Utils",
-    "PostgresStorage"
+    "PostgresStorage",
+    "MLCICInitializer",
+    "LevenshteinCalculator",
+    "ConfigurableIntentClassifier"
 ]
