@@ -18,7 +18,8 @@ from src.core import (
     Utils,
     EnvReader,
     Logger,
-    ReportManager
+    ReportManager,
+    PostgresStorage
 )
 
 class AEProjectCore:
@@ -27,12 +28,13 @@ class AEProjectCore:
         (
             self.logger,
             self.report_manager,
+            self.storage
         ) = self._init_main_components()
         
         self.app: Optional[FastAPI] = None
         self.templates: Optional[Jinja2Templates] = None
         
-    def _init_main_components(self) -> tuple[Logger, ReportManager]:
+    def _init_main_components(self) -> tuple[Logger, ReportManager, PostgresStorage]:
         try:
             logger_settings = {
                 key.replace('LOGGER_', '').lower(): value
@@ -42,7 +44,11 @@ class AEProjectCore:
             
             logger = Logger(**logger_settings)
             report_manager = ReportManager(self.env)
-            return logger, report_manager
+            
+            database_url = getattr(self.env, 'POSTGRES_DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/aeproject_dev')
+            postgres_storage = PostgresStorage(database_url, logger)
+            
+            return logger, report_manager, postgres_storage
         except Exception as e:
             Utils.writelog(
                 level="CRITICAL",
@@ -58,7 +64,6 @@ class AEProjectCore:
                 level="INFO",
                 message=f"Запуск FastAPI приложения {self.__class__.__name__}"
             )
-                        
             
             yield
             
@@ -70,10 +75,25 @@ class AEProjectCore:
                 level="INFO",
                 message=f"Завершение работы FastAPI приложения {self.__class__.__name__}"
             )
+            
+    async def _initialize_storage(self):
+        try:
+            await self.storage.initialize()
+            Utils.writelog(
+                logger=self.logger,
+                    level="INFO",
+                    message="PostgresStorage инициализирован"
+                )
+        except Exception as e:
+            Utils.writelog(
+                logger=self.logger,
+                level="ERROR",
+                message=f"Ошибка инициализации PostgresStorage: {e}"
+        )
 
     def _create_app(self) -> FastAPI:
         app = FastAPI(
-            title=getattr(self.env, 'AEAPISETTINGS_TITLE', 'OZON Web Application') ,
+            title=getattr(self.env, 'AEAPISETTINGS_TITLE', 'Web Application') ,
             description=getattr(self.env, 'AEAPISETTINGS_DESCRIPTION', '-'),
             version=getattr(self.env, 'AEAPISETTINGS_VERSION', '1.0.0'),
             lifespan=self.lifespan
@@ -114,6 +134,7 @@ class AEProjectCore:
             "templates": self.templates,
             "logger": self.logger,
             "report_manager": self.report_manager,
+            "storage": self.storage
         }
 
     async def _register_middlewares(self, app: FastAPI):
@@ -296,6 +317,8 @@ class AEProjectCore:
                 level="INFO",
                 message=f"Запуск проекта: {self.__class__.__name__}"
             )
+            
+            await self._initialize_storage()
             
             self.app = self._create_app()
             

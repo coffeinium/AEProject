@@ -6,10 +6,14 @@ from .base import (
     Utils,
     ReportManager
 )
+from .storage import (
+    PostgresStorage
+)
 
 __all__ = [
     "Logger",
     "EnvReader",
     "ReportManager",
-    "Utils"
+    "Utils",
+    "PostgresStorage"
 ]

@@ -4,3 +4,10 @@ redis[asyncio]
 jinja2
 rich
 pandas
+psycopg2-binary
+sqlalchemy[asyncio]
+alembic
+asyncpg
+openpyxl
+python-multipart
+python-dateutil
