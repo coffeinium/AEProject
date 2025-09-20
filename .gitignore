@@ -11,3 +11,5 @@
 .env/
 *.report
 */node_modules
+*/postgres_data
+postgres_data/
