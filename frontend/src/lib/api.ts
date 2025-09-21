@@ -52,14 +52,17 @@ export async function analyzeQuery(q: string): Promise<BackendEnvelope[]> {
   const url = `${API_BASE}${SEARCH_PATH}`;
 
   if (ANALYZE_METHOD === 'GET') {
-    const full = makeURL(url, { [ANALYZE_BODY_KEY]: q, ...ANALYZE_EXTRA_JSON });
+    // Добавляем query в URL
+    const full = makeURL(url, { query: q, [ANALYZE_BODY_KEY]: q, ...ANALYZE_EXTRA_JSON });
     const resp = await fetch(full);
     if (!resp.ok) throw new Error(String(resp.status));
     const data = await resp.json();
     return Array.isArray(data) ? data : [data];
   }
 
-  const resp = await fetch(url, {
+  // Для POST тоже добавим query в URL
+  const full = makeURL(url, { query: q });
+  const resp = await fetch(full, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ [ANALYZE_BODY_KEY]: q, ...ANALYZE_EXTRA_JSON }),
@@ -107,9 +110,7 @@ export async function getSuggest(q: string): Promise<SuggestItem[]> {
           title: ent.session_name || ent.company_name || ent.name || '',
           customer: ent.customer_name || '',
           price: ent.contract_amount ?? ent.session_amount ?? '',
-          deadline: (ent.contract_date || ent.session_completed_date || '')
-            .toString()
-            .slice(0, 10),
+          deadline: (ent.contract_date || ent.session_completed_date || '').toString().slice(0, 10),
           rawEntities: ent,
         },
       };
@@ -119,7 +120,12 @@ export async function getSuggest(q: string): Promise<SuggestItem[]> {
   const url = `${API_BASE}${SEARCH_PATH}`;
 
   if (SUGGEST_METHOD === 'GET') {
-    const full = makeURL(url, { [SUGGEST_MODE_KEY]: SUGGEST_MODE_VALUE, [SUGGEST_QUERY_KEY]: q });
+    // Добавляем query в URL
+    const full = makeURL(url, {
+      query: q,
+      [SUGGEST_MODE_KEY]: SUGGEST_MODE_VALUE,
+      [SUGGEST_QUERY_KEY]: q
+    });
     const resp = await fetch(full);
     if (!resp.ok) return [];
     const data = await resp.json().catch(() => []);
@@ -128,7 +134,9 @@ export async function getSuggest(q: string): Promise<SuggestItem[]> {
     );
   }
 
-  const resp = await fetch(url, {
+  // Для POST тоже добавим query в URL
+  const full = makeURL(url, { query: q });
+  const resp = await fetch(full, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ [SUGGEST_MODE_KEY]: SUGGEST_MODE_VALUE, [SUGGEST_QUERY_KEY]: q }),
