@@ -1,0 +1,125 @@
+.examples {
+  margin: 24px 0;
+  padding: 0 4px;
+}
+
+.examples__title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #f2f2f2;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.examples__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.examples__card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.examples__card:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(79, 172, 254, 0.4);
+  box-shadow: 0 4px 20px rgba(79, 172, 254, 0.1);
+}
+
+.examples__card-header {
+  margin-bottom: 12px;
+}
+
+.examples__card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #4facfe;
+  margin: 0;
+}
+
+.examples__card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.examples__description {
+  color: #b0b0b0;
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.examples__example {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.examples__example strong {
+  color: #f2f2f2;
+  font-weight: 600;
+}
+
+.examples__example-text {
+  color: #90cdf4;
+  font-style: italic;
+  background: rgba(79, 172, 254, 0.1);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-left: 3px solid #4facfe;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+  .examples__grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .examples__card {
+    padding: 14px;
+  }
+  
+  .examples__title {
+    font-size: 1.3rem;
+  }
+  
+  .examples__card-title {
+    font-size: 1rem;
+  }
+}
+
+/* Анимация появления */
+.examples__card {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Эффект нажатия */
+.examples__card:active {
+  transform: translateY(0) scale(0.98);
+}

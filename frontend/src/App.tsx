@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import SearchBar from '@/components/SearchBar/SearchBar';
 import History from '@/components/History/History';
+import Examples from '@/components/Examples/Examples';
 import { fetchHistory, search, type HistoryRecord, type SearchResponse } from '@/lib/api';
 import { HISTORY_LIMIT } from '@/lib/config';
 import Modal from '@/components/Modal/Modal';
@@ -70,6 +71,8 @@ export default function App() {
         onSearch={handleSearch}
         onCreate={() => openContractForm(null)}
       />
+
+      <Examples onExampleClick={handleSearch} />
 
       <History
         items={history}
