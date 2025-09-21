@@ -221,7 +221,7 @@ class ConfigurableIntentClassifier:
     
     async def preprocess_text_async(self, text: str) -> str:
         """
-        Асинхронная предобработка текста с исправлением опечаток
+        Продвинутая асинхронная предобработка текста с множественными нормализациями
         
         Args:
             text (str): Исходный текст
@@ -248,19 +248,20 @@ class ConfigurableIntentClassifier:
                 processed_text
             )
             
-            # Нормализуем числа
-            corrected_text = re.sub(r'\d+', 'NUMBER', corrected_text)
-            
-            # Убираем лишние пробелы
-            corrected_text = re.sub(r'\s+', ' ', corrected_text).strip()
+            # Продвинутая нормализация
+            normalized_text = await asyncio.get_event_loop().run_in_executor(
+                None,
+                self._advanced_normalize_sync,
+                corrected_text
+            )
             
             Utils.writelog(
                 logger=self.logger,
                 level="DEBUG",
-                message=f"Текст обработан: '{text}' -> '{corrected_text}'"
+                message=f"Текст обработан: '{text}' -> '{normalized_text}'"
             )
             
-            return corrected_text
+            return normalized_text
             
         except Exception as e:
             Utils.writelog(
@@ -282,6 +283,73 @@ class ConfigurableIntentClassifier:
             case_sensitive=False
         )
         return result['corrected_text']
+    
+    def _advanced_normalize_sync(self, text: str) -> str:
+        """
+        Продвинутая синхронная нормализация текста
+        
+        Args:
+            text (str): Исходный текст
+            
+        Returns:
+            str: Нормализованный текст
+        """
+        try:
+            normalized = text
+            
+            # Нормализация сумм и денежных значений
+            normalized = re.sub(r'(\d+(?:[.,]\d+)?)\s*(?:тыс\.?|тысяч|к)', r'\1 тысяч', normalized)
+            normalized = re.sub(r'(\d+(?:[.,]\d+)?)\s*(?:млн\.?|миллионов?)', r'\1 млн', normalized)
+            normalized = re.sub(r'(\d+(?:[.,]\d+)?)\s*(?:руб\.?|рублей)', r'\1 рублей', normalized)
+            
+            # Нормализация форм организаций
+            normalized = re.sub(r'\bооо\b', 'ООО', normalized, flags=re.IGNORECASE)
+            normalized = re.sub(r'\bао\b', 'АО', normalized, flags=re.IGNORECASE)
+            normalized = re.sub(r'\bпао\b', 'ПАО', normalized, flags=re.IGNORECASE)
+            normalized = re.sub(r'\bзао\b', 'ЗАО', normalized, flags=re.IGNORECASE)
+            normalized = re.sub(r'\bип\b', 'ИП', normalized, flags=re.IGNORECASE)
+            normalized = re.sub(r'\bгуп\b', 'ГУП', normalized, flags=re.IGNORECASE)
+            normalized = re.sub(r'\bмуп\b', 'МУП', normalized, flags=re.IGNORECASE)
+            
+            # Нормализация ключевых терминов
+            normalized = re.sub(r'\bкс\b', 'КС', normalized, flags=re.IGNORECASE)
+            normalized = re.sub(r'\bинн\b', 'ИНН', normalized, flags=re.IGNORECASE)
+            normalized = re.sub(r'\bбик\b', 'БИК', normalized, flags=re.IGNORECASE)
+            normalized = re.sub(r'\bit\b', 'IT', normalized, flags=re.IGNORECASE)
+            normalized = re.sub(r'\bид\b', 'ID', normalized, flags=re.IGNORECASE)
+            
+            # Нормализация действий
+            normalized = re.sub(r'\b(?:создай|создать|сделай|оформи|оформить)\b', 'создать', normalized)
+            normalized = re.sub(r'\b(?:найди|найти|покажи|показать|поиск)\b', 'найти', normalized)
+            normalized = re.sub(r'\b(?:требуется|нужен|нужна|необходим|необходимо)\b', 'нужен', normalized)
+            
+            # Нормализация типов документов
+            normalized = re.sub(r'\b(?:контракт|договор|соглашение)\b', 'контракт', normalized)
+            normalized = re.sub(r'\b(?:котировк[ауые]?|котировочн[ауые]?\s*сесси[яие])\b', 'котировка', normalized)
+            
+            # Нормализация категорий
+            normalized = re.sub(r'\b(?:канцтовары|канцелярские\s*товары)\b', 'канцтовары', normalized)
+            normalized = re.sub(r'\b(?:продукты\s*питания)\b', 'продукты', normalized)
+            normalized = re.sub(r'\b(?:консультаци[ие])\b', 'консультации', normalized)
+            
+            # Стандартизация пробелов и знаков препинания
+            normalized = re.sub(r'[,;:]\s*', ' ', normalized)  # Убираем знаки препинания
+            normalized = re.sub(r'\s+', ' ', normalized)  # Множественные пробелы в один
+            normalized = normalized.strip()
+            
+            # Замена числовых значений на стандартные токены для лучшего обобщения
+            normalized = re.sub(r'\b\d{4,}\b', 'NUMBER', normalized)  # Большие числа
+            normalized = re.sub(r'\b\d{1,3}(?:[.,]\d+)?\s*(?:тысяч|млн|рублей|к)\b', 'AMOUNT', normalized)  # Суммы
+            
+            return normalized
+            
+        except Exception as e:
+            Utils.writelog(
+                logger=self.logger,
+                level="ERROR",
+                message=f"Ошибка продвинутой нормализации: {e}"
+            )
+            return text
     
     async def train_async(self, 
                          training_data: List[Tuple[str, str]], 
@@ -411,7 +479,7 @@ class ConfigurableIntentClassifier:
             raise
     
     def _create_and_train_pipeline(self, X_train, y_train) -> Pipeline:
-        """Создание и обучение pipeline с гибкой конфигурацией"""
+        """Создание и обучение optimized pipeline с расширенной конфигурацией"""
         config = self.model_config
         
         # Преобразуем ngram_range из списка в кортеж если нужно
@@ -419,22 +487,49 @@ class ConfigurableIntentClassifier:
         if isinstance(ngram_range, list):
             ngram_range = tuple(ngram_range)
         
+        # Создаем TfidfVectorizer с расширенными параметрами
+        tfidf_params = {
+            'max_features': config['tfidf_max_features'],
+            'ngram_range': ngram_range,
+            'stop_words': None,
+            'lowercase': True,
+            'min_df': config['min_df'],
+            'max_df': config['max_df']
+        }
+        
+        # Добавляем дополнительные параметры если они есть в конфигурации
+        if 'use_sublinear_tf' in config:
+            tfidf_params['sublinear_tf'] = config['use_sublinear_tf']
+        if 'use_idf' in config:
+            tfidf_params['use_idf'] = config['use_idf']
+        if 'smooth_idf' in config:
+            tfidf_params['smooth_idf'] = config['smooth_idf']
+        if 'norm' in config:
+            tfidf_params['norm'] = config['norm']
+        
+        # Создаем LogisticRegression с расширенными параметрами
+        lr_params = {
+            'random_state': config['lr_random_state'],
+            'max_iter': config['lr_max_iter'],
+            'C': config['lr_c'],
+            'class_weight': config['lr_class_weight']
+        }
+        
+        # Добавляем solver если указан
+        if 'lr_solver' in config:
+            lr_params['solver'] = config['lr_solver']
+        
         pipeline = Pipeline([
-            ('tfidf', TfidfVectorizer(
-                max_features=config['tfidf_max_features'],
-                ngram_range=ngram_range,
-                stop_words=None,
-                lowercase=True,
-                min_df=config['min_df'],
-                max_df=config['max_df']
-            )),
-            ('classifier', LogisticRegression(
-                random_state=config['lr_random_state'],
-                max_iter=config['lr_max_iter'],
-                C=config['lr_c'],
-                class_weight=config['lr_class_weight']
-            ))
+            ('tfidf', TfidfVectorizer(**tfidf_params)),
+            ('classifier', LogisticRegression(**lr_params))
         ])
+        
+        Utils.writelog(
+            logger=self.logger,
+            level="INFO",
+            message=f"Pipeline создан с параметрами: TF-IDF features={config['tfidf_max_features']}, "
+                   f"n-grams={ngram_range}, C={config['lr_c']}"
+        )
         
         pipeline.fit(X_train, y_train)
         return pipeline
@@ -580,7 +675,7 @@ class ConfigurableIntentClassifier:
             return {}
     
     def _extract_entities_sync(self, text: str, intent: str) -> Dict[str, str]:
-        """Синхронное извлечение сущностей с использованием гибких паттернов"""
+        """Улучшенное синхронное извлечение сущностей с контекстной валидацией"""
         entities = {}
         
         # Если паттерны не настроены, возвращаем пустой словарь
@@ -588,38 +683,141 @@ class ConfigurableIntentClassifier:
             return entities
         
         text_lower = text.lower()
+        original_text = text
         
-        # Проходим по всем типам сущностей
+        # Проходим по всем типам сущностей с приоритетом
+        entity_priority = ['customer_inn', 'inn', 'bik', 'amount', 'customer_name', 'company_name', 
+                          'contract_name', 'ks_name', 'category', 'law', 'document_id', 'deadline', 'priority']
+        
+        # Сначала обрабатываем приоритетные сущности
+        for entity_type in entity_priority:
+            if entity_type in self.entity_patterns and entity_type not in entities:
+                patterns = self.entity_patterns[entity_type]
+                for pattern in patterns:
+                    try:
+                        # Выбираем подходящий текст для поиска
+                        search_text = text_lower
+                        if entity_type in ['company_name', 'customer_name', 'contract_name', 'ks_name']:
+                            search_text = original_text  # Сохраняем регистр для названий
+                        
+                        match = re.search(pattern, search_text)
+                        if match:
+                            extracted_value = match.group(1).strip()
+                            
+                            # Валидация и нормализация по типам
+                            if self._validate_entity(entity_type, extracted_value):
+                                normalized_value = self._normalize_entity(entity_type, extracted_value)
+                                entities[entity_type] = normalized_value
+                                break  # Берем первое валидное значение для каждого типа
+                                
+                    except re.error as e:
+                        Utils.writelog(
+                            logger=self.logger,
+                            level="WARNING",
+                            message=f"Ошибка в регулярном выражении {pattern}: {e}"
+                        )
+                        continue
+        
+        # Обрабатываем остальные сущности
         for entity_type, patterns in self.entity_patterns.items():
-            for pattern in patterns:
-                try:
-                    match = re.search(pattern, text_lower if entity_type != 'company' else text)
-                    if match:
-                        extracted_value = match.group(1).strip()
-                        
-                        # Дополнительная валидация для некоторых типов
-                        if entity_type == 'product' and len(extracted_value) < 3:
-                            continue  # Слишком короткие продукты игнорируем
-                        
-                        if entity_type == 'amount':
-                            # Нормализуем числовые значения
-                            try:
-                                extracted_value = str(float(extracted_value))
-                            except ValueError:
-                                continue
-                        
-                        entities[entity_type] = extracted_value
-                        break  # Берем первое найденное значение для каждого типа
-                        
-                except re.error as e:
-                    Utils.writelog(
-                        logger=self.logger,
-                        level="WARNING",
-                        message=f"Ошибка в регулярном выражении {pattern}: {e}"
-                    )
-                    continue
+            if entity_type not in entities and entity_type not in entity_priority:
+                for pattern in patterns:
+                    try:
+                        search_text = text_lower if entity_type not in ['company_name', 'customer_name'] else original_text
+                        match = re.search(pattern, search_text)
+                        if match:
+                            extracted_value = match.group(1).strip()
+                            if self._validate_entity(entity_type, extracted_value):
+                                normalized_value = self._normalize_entity(entity_type, extracted_value)
+                                entities[entity_type] = normalized_value
+                                break
+                                
+                    except re.error as e:
+                        continue
         
         return entities
+    
+    def _validate_entity(self, entity_type: str, value: str) -> bool:
+        """Валидация извлеченной сущности"""
+        if not value or len(value.strip()) < 1:
+            return False
+        
+        # Специфическая валидация по типам
+        if entity_type in ['customer_inn', 'inn']:
+            # ИНН должен быть 10 или 12 цифр
+            return re.match(r'^\d{10}$|^\d{12}$', value.strip())
+        
+        elif entity_type == 'bik':
+            # БИК должен быть 9 цифр
+            return re.match(r'^\d{9}$', value.strip())
+        
+        elif entity_type == 'amount':
+            # Проверяем, что это число
+            try:
+                float(value.replace(',', '.').replace(' ', ''))
+                return True
+            except ValueError:
+                return False
+        
+        elif entity_type in ['customer_name', 'company_name']:
+            # Название должно быть не слишком коротким и содержать разумные символы
+            return len(value.strip()) >= 3 and not re.match(r'^\d+$', value.strip())
+        
+        elif entity_type in ['contract_name', 'ks_name']:
+            # Название контракта/КС должно содержать осмысленные слова
+            return len(value.strip()) >= 3 and not re.match(r'^\d+$', value.strip())
+        
+        elif entity_type == 'document_id':
+            # ID документа должен быть числом
+            return re.match(r'^\d+$', value.strip())
+        
+        elif entity_type == 'deadline':
+            # Дата должна быть в формате дд.мм.гггг или дд/мм/гггг
+            return re.match(r'^\d{1,2}[./]\d{1,2}[./]\d{2,4}$', value.strip())
+        
+        else:
+            # Общая валидация - не пустое значение
+            return len(value.strip()) >= 1
+    
+    def _normalize_entity(self, entity_type: str, value: str) -> str:
+        """Нормализация извлеченной сущности"""
+        normalized = value.strip()
+        
+        if entity_type == 'amount':
+            # Нормализуем числовое значение
+            try:
+                normalized = normalized.replace(',', '.')
+                number = float(normalized)
+                # Если число целое, возвращаем без дробной части
+                if number.is_integer():
+                    return str(int(number))
+                else:
+                    return str(number)
+            except ValueError:
+                return normalized
+        
+        elif entity_type in ['customer_inn', 'inn', 'bik', 'document_id']:
+            # Убираем все нецифровые символы
+            return re.sub(r'\D', '', normalized)
+        
+        elif entity_type in ['customer_name', 'company_name', 'contract_name', 'ks_name']:
+            # Нормализуем пробелы и кавычки
+            normalized = re.sub(r'\s+', ' ', normalized)
+            normalized = re.sub(r'["\']', '', normalized)
+            return normalized.strip()
+        
+        elif entity_type == 'law':
+            # Стандартизируем формат закона
+            if 'фз' in normalized.lower():
+                normalized = re.sub(r'[-\s]*фз', '-ФЗ', normalized, flags=re.IGNORECASE)
+            return normalized.upper()
+        
+        elif entity_type == 'category':
+            # Приводим к нижнему регистру
+            return normalized.lower()
+        
+        else:
+            return normalized
     
     async def save_model_async(self, filepath: Optional[str] = None) -> None:
         """
