@@ -1,32 +1,30 @@
-/* src/components/Forms/forms.css */
 .ae-form { display: grid; gap: 14px; }
-.ae-form__status { background: #f7f7ff; border: 1px solid #e6e6ff; padding: 10px 12px; border-radius: 10px; }
+.ae-form__status { background: #29294a; border: 1px solid #3a3a66; padding: 10px 12px; border-radius: 10px; color: #dfe0ff; }
 .ae-form__status-line { display: flex; gap: 10px; align-items: center; }
-.ae-form__status-msg { color: #444; }
+.ae-form__status-msg { color: #cfd0ff; }
 
-.ae-badge {
-  background: #eef0ff; color: #3b3bf0; border-radius: 999px;
-  padding: 2px 8px; font-size: 12px; line-height: 18px;
-}
+.ae-badge { background: #333366; color: #c9c9ff; border-radius: 999px; padding: 2px 8px; font-size: 12px; line-height: 18px; }
 
 .ae-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 720px) { .ae-grid { grid-template-columns: 1fr; } }
 
 .ae-field { display: grid; gap: 6px; }
-.ae-label { font-size: 12px; color: #5b5b68; }
+.ae-label { font-size: 12px; color: #b8b8d6; }
 .ae-input {
-  height: 40px; padding: 0 10px; border: 1px solid #dcdce6; border-radius: 8px; font-size: 14px;
+  height: 40px; padding: 0 10px; border: 1px solid #3c3c60; border-radius: 8px; font-size: 14px;
+  background: #2a2a48; color: #f1f1ff;
 }
+.ae-input::placeholder { color: #9c9cc0; }
 .ae-input:focus { outline: none; border-color: #7a7aff; box-shadow: 0 0 0 3px rgba(122,122,255,0.18); }
-.ae-input.is-warn { border-color: #ffb34d; background: #fff8ef; }
+.ae-input.is-warn { border-color: #8a5a1f; background: #3b2a1a; }
 
-.ae-hint { background: #fafafe; border: 1px solid #eeeafc; border-radius: 10px; padding: 10px 12px; }
+.ae-hint { background: #262645; border: 1px solid #383865; border-radius: 10px; padding: 10px 12px; color: #d6d6f8; }
 .ae-hint__title { font-weight: 600; margin-bottom: 6px; }
-.ae-hint__list { margin: 0; padding-left: 18px; color: #555; }
+.ae-hint__list { margin: 0; padding-left: 18px; color: #c7c7ea; }
 
 .ae-actions { display: flex; justify-content: flex-end; gap: 10px; }
 .ae-btn {
-  height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid #d6d6dc;
+  height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid #3b3b56;
   background: #3b3bf0; color: #fff; cursor: pointer;
 }
 .ae-btn:disabled { opacity: 0.6; cursor: not-allowed; }

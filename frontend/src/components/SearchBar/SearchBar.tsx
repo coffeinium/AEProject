@@ -114,14 +114,15 @@ export default function SearchBar({ placeholder = 'Поиск…', onSearch, onC
           onKeyDown={onKeyDown}
         />
 
+        {/* заменено: лупа → плюс */}
         <button
           type="button"
           className="searchbar__go"
           onClick={() => submit()}
-          title="Искать"
+          title="Создать документ"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M15.5 14h-.79l-.28-.27a6.471 6.471 0 0 0 1.57-4.23A6.5 6.5 0 1 0 9.5 15a6.471 6.471 0 0 0 4.23-1.57l.27.28v.79l5 5 1.5-1.5-5-5zM4 9.5C4 6.46 6.46 4 9.5 4S15 6.46 15 9.5 12.54 15 9.5 15 4 12.54 4 9.5z" />
+            <path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z" />
           </svg>
         </button>
       </div>

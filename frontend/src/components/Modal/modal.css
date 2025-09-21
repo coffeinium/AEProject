@@ -1,39 +1,14 @@
-/* src/components/Modal/modal.css */
-.modal__backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(16, 16, 24, 0.45);
-  display: grid;
-  place-items: center;
-  z-index: 100;
+.modal__backdrop { position: fixed; inset: 0; background: rgba(16,16,24,0.55); display: grid; place-items: center; z-index: 100; }
+.modal__card { width: min(780px, 96vw); background: #232338; color: #ececf7; border-radius: 14px; border: 1px solid #34345a; box-shadow: 0 20px 60px rgba(0,0,0,0.45); }
+.modal__header { display: flex; align-items: center; padding: 12px 14px; border-bottom: 1px solid #2f2f4f; }
+.modal__title { margin: 0; font-size: 16px; font-weight: 600; }
+.modal__close { margin-left: auto; border: 1px solid #3a3a56; background: #2b2b46; color: #f0f0ff; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+.modal__close:hover { background: #333356; }
+.modal__body { padding: 14px; }
+.modal__footer { padding: 12px 14px; border-top: 1px solid #2f2f4f; display: flex; gap: 8px; justify-content: flex-end; }
+.modal__btn {
+  height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid #3b3b56; background: #2c2c48; color: #e9e9ff; cursor: pointer;
 }
-.modal__card {
-  width: min(780px, 96vw);
-  background: #fff;
-  border-radius: 14px;
-  border: 1px solid #e8e8ef;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-}
-.modal__header {
-  display: flex;
-  align-items: center;
-  padding: 12px 14px;
-  border-bottom: 1px solid #f0f0f5;
-}
-.modal__title {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-.modal__close {
-  margin-left: auto;
-  border: 1px solid #e5e5ee;
-  background: #fff;
-  border-radius: 8px;
-  padding: 6px 10px;
-  cursor: pointer;
-}
-.modal__close:hover { background: #f7f7fb; }
-.modal__body {
-  padding: 14px;
-}
+.modal__btn:hover { background: #35355a; }
+.modal__btn--like { border-color: #2f6340; background: #244033; }
+.modal__btn--dislike { border-color: #7a2d2d; background: #3d2528; }

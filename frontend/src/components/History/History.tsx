@@ -5,7 +5,8 @@ import type { HistoryRecord } from '@/lib/api';
 
 type Props = {
   items: HistoryRecord[];
-  onPick: (text: string) => void;
+  // Возвращаем полный record, чтобы можно было взять entities для предзаполнения
+  onPick: (text: string, record: HistoryRecord) => void;
 };
 
 export default function History({ items, onPick }: Props) {
@@ -19,7 +20,7 @@ export default function History({ items, onPick }: Props) {
             key={r.id}
             className="history__item"
             title={new Date(r.timestamp || r.created_at).toLocaleString()}
-            onClick={() => onPick(r.text)}
+            onClick={() => onPick(r.text, r)}
           >
             <div className="history__text">{r.text}</div>
             <div className="history__meta">

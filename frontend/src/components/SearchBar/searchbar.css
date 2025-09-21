@@ -1,5 +1,3 @@
-/* src/components/SearchBar/searchbar.css */
-
 .searchbar {
   position: relative;
   width: 100%;
@@ -18,15 +16,19 @@
   width: 100%;
   height: 44px;
   padding: 0 12px;
-  border: 1px solid #d6d6dc;
+  border: 1px solid #3a3a4f;
   border-radius: 10px;
   outline: none;
   font-size: 14px;
+  background: #2a2a3d;   /* не белый */
+  color: #f0f0f5;
 }
+
+.searchbar__input::placeholder { color: #a7a7bb; }
 
 .searchbar__input:focus {
   border-color: #7a7aff;
-  box-shadow: 0 0 0 3px rgba(122, 122, 255, 0.2);
+  box-shadow: 0 0 0 3px rgba(122, 122, 255, 0.15);
 }
 
 .searchbar__create,
@@ -34,8 +36,9 @@
   width: 44px;
   height: 44px;
   border-radius: 10px;
-  border: 1px solid #d6d6dc;
-  background: #fff;
+  border: 1px solid #3a3a4f;
+  background: #26263a;   /* тёмная кнопка */
+  color: #eaeaff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -43,23 +46,22 @@
 }
 
 .searchbar__create:hover,
-.searchbar__go:hover {
-  background: #f6f6f8;
-}
+.searchbar__go:hover { background: #2f2f45; }
 
 .searchbar__dropdown {
   position: absolute;
   top: calc(100% + 6px);
-  left: 52px;   /* выравниваем под инпут */
-  right: 52px;  /* выравниваем под инпут */
-  background: #fff;
-  border: 1px solid #e4e4ea;
+  left: 52px;
+  right: 52px;
+  background: #25253a;        /* тёмный дропдаун */
+  border: 1px solid #3b3b52;
   border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-  max-height: 280px;          /* все элементы, скролл при переполнении */
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  max-height: 280px;
   overflow-y: auto;
   z-index: 10;
   padding: 6px;
+  color: #e8e8f5;
 }
 
 .searchbar__item {
@@ -70,6 +72,4 @@
 }
 
 .searchbar__item:hover,
-.searchbar__item.is-active {
-  background: #f2f3ff;
-}
+.searchbar__item.is-active { background: #30304a; }
