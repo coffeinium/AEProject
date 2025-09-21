@@ -4,7 +4,8 @@ from .services import (
 )
 from .base import (
     Utils,
-    ReportManager
+    ReportManager,
+    TextExtractor
 )
 from .storage import (
     PostgresStorage
@@ -17,6 +18,7 @@ from .ml import (
 __all__ = [
     "Logger",
     "EnvReader",
+    "TextExtractor",
     "ReportManager",
     "Utils",
     "PostgresStorage",
