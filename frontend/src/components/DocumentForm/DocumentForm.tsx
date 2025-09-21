@@ -15,162 +15,65 @@ export type DocumentData = {
   notes?: string;
 };
 
-type Props = {
-  envelope?: BackendEnvelope | null;
-  initial?: DocumentData;
-  onSubmit: (data: any) => void;
-  onCancel: () => void;          // оставлен для совместимости (кнопки в футере модалки)
-  formId?: string;               // id формы для внешнего сабмита из модалки
+function isNil(v: any): boolean { return v === null || v === undefined; }
+function isEmpty(v: any): boolean {
+  if (isNil(v)) return true;
+  if (typeof v === 'string') return v.trim().length === 0;
+  if (Array.isArray(v)) return v.length === 0;
+  if (typeof v === 'object') return Object.keys(v).length === 0;
+  return false;
+}
+
+const asText = (v: any) => (isNil(v) ? '' : String(v));
+const asMoney = (v: any) => {
+  if (isNil(v)) return '';
+  const s = String(v).replace(',', '.').replace(/[^\d.]/g, '');
+  return s;
+};
+const asDate = (v: any) => {
+  if (isNil(v)) return '';
+  // допускаем ISO с 'T' и без
+  const s = String(v).replace(' ', 'T');
+  return s;
 };
 
-const isNil = (v: any) => v === null || v === undefined;
-const isEmpty = (v: any) => isNil(v) || v === '';
-const asText = (v: any) => (isEmpty(v) ? '' : String(v));
-const asDate = (v: any) => (isEmpty(v) ? '' : String(v).slice(0, 10));
-const asMoney = (v: any) => (isEmpty(v) ? '' : String(v));
-
-/* UI helpers */
-const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-  <div className="th-section">
-    <div className="th-section__title">{title}</div>
-    <div className="th-section__body">{children}</div>
-  </div>
-);
-
-const Row: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="th-form__row">{children}</div>
-);
-
-function Field({
-  label,
-  name,
-  type = 'text',
-  value,
-  onChange,
-}: {
-  label: string;
-  name: string;
-  type?: 'text' | 'date' | 'money' | 'textarea' | 'number';
-  value: string;
-  onChange: (name: string, value: string) => void;
-}) {
-  if (type === 'textarea') {
-    return (
-      <label className="th-field th-field--block">
-        <span className="th-field__label">{label}</span>
-        <textarea
-          rows={4}
-          value={value}
-          onChange={(e) => onChange(name, e.target.value)}
-          placeholder={label}
-        />
-      </label>
-    );
-  }
-  const inputType = type === 'date' ? 'date' : type === 'number' ? 'number' : 'text';
-  return (
-    <label className="th-field">
-      <span className="th-field__label">{label}</span>
-      <input
-        type={inputType}
-        value={value}
-        onChange={(e) => onChange(name, e.target.value)}
-        placeholder={label}
-      />
-    </label>
-  );
+function baseType(t: string): string {
+  const s = (t || '').toLowerCase();
+  if (!s) return '';
+  return s
+    .replace(/^create_/, '')
+    .replace(/^search_/, '')
+    .replace(/_profile$/, '')
+    .trim();
+}
+function normalizeType(t: string): string {
+  const b = baseType(t);
+  if (!b) return '';
+  if (b.includes('contract')) return 'create_contract';
+  if (b.includes('session')) return 'create_session';
+  if (b.includes('company')) return 'create_company_profile';
+  return t;
 }
 
-/* ===== Общие группы (не entities) ===== */
-function SystemGroup({
-  status,
-  onChange,
-}: {
-  status?: string;
-  onChange: (name: string, value: string) => void;
-}) {
-  if (isEmpty(status)) return null;
-  return (
-    <Section title="Системные">
-      <Row>
-        <Field label="status" name="__status" value={asText(status)} onChange={onChange} />
-      </Row>
-    </Section>
-  );
+function payloadKeyFor(t: string): 'contract_data' | 'session_data' | 'company_data' | null {
+  if (t.includes('contract')) return 'contract_data';
+  if (t.includes('session')) return 'session_data';
+  if (t.includes('company')) return 'company_data';
+  return null;
 }
 
-function ResponseGroup({
-  response,
-  onChange,
-}: {
-  response?: { type?: string; data?: any };
-  onChange: (name: string, value: string) => void;
-}) {
-  if (!response) return null;
-  const t = asText(response.type);
-  const d = isNil(response.data)
-    ? ''
-    : typeof response.data === 'string'
-    ? response.data
-    : JSON.stringify(response.data);
-  if (isEmpty(t) && isEmpty(d)) return null;
-  return (
-    <Section title="Response">
-      <Row>
-        {!isEmpty(t) && <Field label="type" name="__response.type" value={t} onChange={onChange} />}
-        {!isEmpty(d) && (
-          <Field label="data" name="__response.data" type="textarea" value={d} onChange={onChange} />
-        )}
-      </Row>
-    </Section>
-  );
-}
-
-function MLGroup({
-  ml,
-  onChange,
-}: {
-  ml?: { intent?: string; confidence?: number | null };
-  onChange: (name: string, value: string) => void;
-}) {
-  if (!ml) return null;
-  const i = asText(ml.intent);
-  const c = isNil(ml.confidence) ? '' : String(ml.confidence);
-  if (isEmpty(i) && isEmpty(c)) return null;
-  return (
-    <Section title="ML">
-      <Row>
-        {!isEmpty(i) && <Field label="intent" name="__ml.intent" value={i} onChange={onChange} />}
-        {!isEmpty(c) && <Field label="confidence" name="__ml.confidence" value={c} onChange={onChange} />}
-      </Row>
-    </Section>
-  );
-}
-
-/* ===== Entities (известные поля для порядка) ===== */
-const COMPANY_FIELDS: Array<{ key: string; label: string; type?: 'text' | 'textarea' }> = [
-  { key: 'company_name', label: 'Наименование' },
-  { key: 'name', label: 'Альтернативное наименование' },
-  { key: 'company_inn', label: 'ИНН' },
-  { key: 'company_ogrn', label: 'ОГРН' },
-  { key: 'company_kpp', label: 'КПП' },
-  { key: 'company_address', label: 'Юр. адрес', type: 'textarea' },
-  { key: 'company_post_address', label: 'Почтовый адрес', type: 'textarea' },
-  { key: 'company_phone', label: 'Телефон' },
-  { key: 'company_email', label: 'Email' },
-  { key: 'company_site', label: 'Сайт' },
-];
-
+/** Известные поля для предзаполнения и порядка в Entities */
 const CONTRACT_FIELDS: Array<{ key: string; label: string; type?: 'text' | 'date' | 'money' | 'textarea' }> = [
+  { key: 'contract_name', label: 'Название контракта' },
   { key: 'contract_id', label: 'ID контракта' },
-  { key: 'contract_date', label: 'Дата', type: 'date' },
   { key: 'contract_amount', label: 'Сумма', type: 'money' },
+  { key: 'contract_date', label: 'Дата', type: 'date' },
   { key: 'law_basis', label: 'Правовая база' },
   { key: 'category_pp_first_position', label: 'Категория (первая позиция)' },
   { key: 'customer_name', label: 'Заказчик (наименование)' },
   { key: 'customer_inn', label: 'Заказчик (ИНН)' },
   { key: 'supplier_name', label: 'Поставщик (наименование)' },
-  { key: 'supplier_inn', label: 'Поставщик (ИНН)' },
+  { key: 'supplier_inn', label: 'Поставщик (ИНН)' }
 ];
 
 const SESSION_FIELDS: Array<{ key: string; label: string; type?: 'text' | 'date' | 'money' | 'textarea' }> = [
@@ -184,40 +87,244 @@ const SESSION_FIELDS: Array<{ key: string; label: string; type?: 'text' | 'date'
   { key: 'customer_name', label: 'Заказчик (наименование)' },
   { key: 'customer_inn', label: 'Заказчик (ИНН)' },
   { key: 'supplier_name', label: 'Поставщик (наименование)' },
-  { key: 'supplier_inn', label: 'Поставщик (ИНН)' },
+  { key: 'supplier_inn', label: 'Поставщик (ИНН)' }
 ];
 
-function normByType(type: string | undefined, v: any) {
-  if (type === 'date') return asDate(v);
-  if (type === 'money') return asMoney(v);
-  return asText(v);
+const COMPANY_FIELDS: Array<{ key: string; label: string; type?: 'text' | 'date' | 'money' | 'textarea' }> = [
+  { key: 'company_name', label: 'Название компании' },
+  { key: 'company_inn', label: 'ИНН' },
+  { key: 'company_kpp', label: 'КПП' },
+  { key: 'company_ogrn', label: 'ОГРН' },
+  { key: 'company_okved', label: 'ОКВЭД' },
+  { key: 'company_address', label: 'Адрес', type: 'textarea' },
+  { key: 'company_phone', label: 'Телефон' },
+  { key: 'company_email', label: 'Email' },
+  { key: 'company_site', label: 'Сайт' }
+];
+
+const KNOWN_FIELDS_BY_TYPE: Record<string, typeof CONTRACT_FIELDS> = {
+  create_contract: CONTRACT_FIELDS,
+  contract_search: CONTRACT_FIELDS,
+  create_session: SESSION_FIELDS,
+  session_search: SESSION_FIELDS,
+  create_company_profile: COMPANY_FIELDS,
+  company_search: COMPANY_FIELDS
+};
+
+/** Обязательные поля для каждого типа */
+function requiredByType(normalized: string): Array<{ key: string; label: string; type?: 'text' | 'date' | 'money' }> {
+  if (normalized.includes('contract')) {
+    return [
+      { key: 'customer_name', label: 'Заказчик (наименование)' },
+      { key: 'customer_inn', label: 'Заказчик (ИНН)' }
+    ];
+  }
+  if (normalized.includes('session')) {
+    return [
+      { key: 'customer_name', label: 'Заказчик (наименование)' },
+      { key: 'customer_inn', label: 'Заказчик (ИНН)' },
+      { key: 'law_basis', label: 'Правовая база' }
+    ];
+  }
+  if (normalized.includes('company')) {
+    return [
+      { key: 'company_name', label: 'Название компании' },
+      { key: 'company_inn', label: 'ИНН' }
+    ];
+  }
+  return [];
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <fieldset className="th-section">
+      <legend className="th-section__title">{title}</legend>
+      <div className="th-section__body">{children}</div>
+    </fieldset>
+  );
+}
+function Row({ children }: { children: React.ReactNode }) {
+  return <div className="th-row">{children}</div>;
+}
+
+function Field({
+  label,
+  name,
+  value,
+  onChange,
+  type = 'text'
+}: {
+  label?: string;
+  name: string;
+  value: string;
+  type?: 'text' | 'textarea' | 'date' | 'money';
+  onChange: (name: string, value: string) => void;
+}) {
+  const norm = (t: string | undefined, v: any) => {
+    if (t === 'date') return asDate(v);
+    if (t === 'money') return asMoney(v);
+    return asText(v);
+  };
+  const inputProps = {
+    name,
+    value: norm(type, value),
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(name, e.target.value)
+  };
+  return (
+    <label className="th-field">
+      {!!label && <span className="th-field__label">{label}</span>}
+      {type === 'textarea' ? (
+        <textarea className="th-input th-input--area" rows={6} readOnly {...(inputProps as any)} />
+      ) : (
+        <input
+          className="th-input"
+          type={type === 'date' ? 'datetime-local' : 'text'}
+          readOnly
+          {...(inputProps as any)}
+        />
+      )}
+    </label>
+  );
+}
+
+function SystemGroup({ status }: { status: BackendEnvelope['status'] }) {
+  return (
+    <Section title="Системные">
+      <Row>
+        <Field label="status" name="__status" value={asText(status)} onChange={() => {}} />
+      </Row>
+    </Section>
+  );
+}
+
+function ResponseGroup({ response, normalized }: { response: BackendEnvelope['response']; normalized: string }) {
+  if (!response) return null;
+  const t = asText(response.type);
+  const data = response.data;
+
+  // helper to guess field type by name
+  const guessType = (k: string): 'text' | 'date' | 'money' => {
+    const key = k.toLowerCase();
+    if (key.includes('date') || key.endsWith('_at') || key.endsWith('date')) return 'date';
+    if (key.includes('amount') || key.includes('sum') || key.includes('price')) return 'money';
+    return 'text';
+  };
+
+  // Render primitives as Field
+  const renderPrimitive = (label: string, name: string, value: any) => {
+    const type = guessType(label);
+    const v = type === 'date' ? asDate(value) : type === 'money' ? asMoney(value) : asText(value);
+    if (isEmpty(v)) return null;
+    return <Field key={name} label={label} name={name} type={type} value={v} onChange={() => {}} />;
+  };
+
+  // If data is not object – fallback to text
+  if (isNil(data) || typeof data !== 'object') {
+    if (isEmpty(t) && isEmpty(data)) return null;
+    return (
+      <Section title="Response">
+        <Row>
+          {!isEmpty(t) && <Field label="type" name="__response.type" value={t} onChange={() => {}} />}
+          {!isNil(data) && <Field label="data" name="__response.data" type="textarea" value={asText(data)} onChange={() => {}} />}
+        </Row>
+      </Section>
+    );
+  }
+
+  // data is object: split into simple fields and nested objects/arrays
+  const entries = Object.entries(data as Record<string, any>);
+  const simple: Array<[string, any]> = [];
+  const nested: Array<[string, any]> = [];
+  for (const [k, v] of entries) {
+    if (v && typeof v === 'object') nested.push([k, v]);
+    else simple.push([k, v]);
+  }
+
+  return (
+    <Section title="Response">
+      <Row>
+        {!isEmpty(t) && <Field label="type" name="__response.type" value={t} onChange={() => {}} />}
+        {simple.map(([k, v]) => renderPrimitive(k, `__response.data.${k}`, v))}
+      </Row>
+
+      {nested.map(([k, v]) => {
+        if (Array.isArray(v)) {
+          if (v.length === 0) return null;
+          return (
+            <Section key={k} title={`Response › ${k}`}>
+              <Row>
+                <Field
+                  label={k}
+                  name={`__response.data.${k}`}
+                  type="textarea"
+                  value={JSON.stringify(v, null, 2)}
+                  onChange={() => {}}
+                />
+              </Row>
+            </Section>
+          );
+        }
+        // object: render its leaf fields
+        const inner = v as Record<string, any>;
+        const innerEntries = Object.entries(inner);
+        const innerFields = innerEntries
+          .map(([ik, iv]) => renderPrimitive(ik, `__response.data.${k}.${ik}`, iv))
+          .filter(Boolean) as React.ReactNode[];
+
+        if (innerFields.length === 0) return null;
+        return (
+          <Section key={k} title={`Response › ${k}`}>
+            <Row>{innerFields}</Row>
+          </Section>
+        );
+      })}
+    </Section>
+  );
+}
+
+function MLGroup({ ml }: { ml: BackendEnvelope['ml_data'] }) {
+  if (!ml) return null;
+  return (
+    <Section title="ML">
+      <Row>
+        <Field label="intent" name="__ml.intent" value={asText(ml.intent)} onChange={() => {}} />
+        <Field label="confidence" name="__ml.confidence" value={asText(ml.confidence)} onChange={() => {}} />
+        {!isEmpty(ml.entities) && (
+          <Field
+            label="entities"
+            name="__ml.entities"
+            type="textarea"
+            value={JSON.stringify(ml.entities, null, 2)}
+            onChange={() => {}}
+          />
+        )}
+      </Row>
+    </Section>
+  );
 }
 
 function EntitiesGroup({
-  type,
+  normalized,
   entities,
   excludeKeys = [],
-  onChange,
+  onChange
 }: {
-  type: string;
+  normalized: string;
   entities: Record<string, any>;
   excludeKeys?: string[];
   onChange: (name: string, value: string) => void;
 }) {
-  const sorted =
-    type.startsWith('company') ? COMPANY_FIELDS :
-    type.startsWith('contract') ? CONTRACT_FIELDS :
-    type.startsWith('session') ? SESSION_FIELDS :
-    [];
-
+  const known = KNOWN_FIELDS_BY_TYPE[normalized] ?? [];
   const exclude = new Set(excludeKeys);
 
-  const orderedVisible = sorted.filter(
-    (f) => !exclude.has(f.key) && !isEmpty(entities[f.key])
+  const orderedVisible = known.filter(
+    (f) => !exclude.has(f.key) && !isNil(entities[f.key]) && String(entities[f.key]) !== ''
   );
 
   const extra = Object.keys(entities)
-    .filter((k) => !exclude.has(k) && orderedVisible.findIndex((f) => f.key === k) === -1 && !isEmpty(entities[k]))
+    .filter(
+      (k) => !exclude.has(k) && orderedVisible.findIndex((f) => f.key === k) === -1 && !isEmpty(entities[k])
+    )
     .map((k) => ({ key: k, label: k, type: 'text' as const }));
 
   if (orderedVisible.length === 0 && extra.length === 0) return null;
@@ -230,8 +337,10 @@ function EntitiesGroup({
             key={f.key}
             name={`entities.${f.key}`}
             label={f.label}
-            type={(f.type as any) ?? 'text'}
-            value={normByType(f.type, entities[f.key])}
+            type={f.type ?? 'text'}
+            value={
+              f.type === 'date' ? asDate(entities[f.key]) : f.type === 'money' ? asMoney(entities[f.key]) : asText(entities[f.key])
+            }
             onChange={onChange}
           />
         ))}
@@ -240,171 +349,65 @@ function EntitiesGroup({
   );
 }
 
-/* Прочие ключи верхнего уровня (если внезапно появятся) */
-function OtherRootGroup({
-  envelope,
-  onChange,
-}: {
-  envelope: any;
-  onChange: (name: string, value: string) => void;
-}) {
-  if (!envelope || typeof envelope !== 'object') return null;
-  const exclude = new Set(['status', 'response', 'ml_data']);
-  const other = Object.entries(envelope).filter(([k, v]) => !exclude.has(k) && !isEmpty(v));
-  if (other.length === 0) return null;
-
-  return (
-    <Section title="Прочее (корень)">
-      <Row>
-        {other.map(([k, v]) => (
-          <Field
-            key={k}
-            label={k}
-            name={`__root.${k}`}
-            type={typeof v === 'number' ? 'number' : 'text'}
-            value={asText(v)}
-            onChange={onChange}
-          />
-        ))}
-      </Row>
-    </Section>
-  );
-}
-
-/* ===== Обязательные поля по типам (фиксированные) ===== */
-type ReqField = { key: string; label: string; type?: 'text' | 'number' | 'money' | 'date' | 'textarea' };
-
-function requiredByType(normalized: string): ReqField[] {
-  if (normalized === 'create_contract') {
-    return [
-      { key: 'contract_name', label: 'Наименование контракта' },
-      { key: 'customer_name', label: 'Наименование заказчика' },
-      { key: 'customer_inn', label: 'ИНН заказчика' },
-      { key: 'contract_amount', label: 'Сумма', type: 'money' },
-      { key: 'category_pp_first_position', label: 'Категория' },
-      { key: 'law_basis', label: 'Закон' },
-    ];
-  }
-  if (normalized === 'create_session') {
-    return [
-      { key: 'session_name', label: 'Наименование КС' },
-      { key: 'customer_name', label: 'Наименование заказчика' },
-      { key: 'customer_inn', label: 'ИНН заказчика' },
-      { key: 'session_amount', label: 'Сумма', type: 'money' },
-      { key: 'category_pp_first_position', label: 'Категория' },
-      { key: 'law_basis', label: 'Закон' },
-    ];
-  }
-  if (normalized === 'contract_search') {
-    return [{ key: 'contract_id', label: 'ID' }];
-  }
-  if (normalized === 'session_search') {
-    return [{ key: 'session_id', label: 'ID' }];
-  }
-  if (normalized === 'company_search') {
-    return [
-      { key: 'name', label: 'Имя компании' },
-      { key: 'company_inn', label: 'ИНН компании' },
-    ];
-  }
-  if (normalized === 'create_company_profile') {
-    return [
-      { key: 'company_name', label: 'Имя компании' },
-      { key: 'company_inn', label: 'ИНН' },
-      { key: 'company_bik', label: 'БИК' },
-    ];
-  }
-  if (normalized === 'help') {
-    return [{ key: 'help_data', label: 'Данные', type: 'textarea' }];
-  }
-  return [];
-}
-
-/* ===== Fallback: когда нет envelope вообще ===== */
-function GenericCreateForm({
-  initial,
-  onSubmit,
-  formId,
-}: {
+type Props = {
+  formId: string;
+  envelope?: BackendEnvelope;
   initial?: DocumentData;
-  onSubmit: (data: DocumentData) => void;
-  formId?: string;
-}) {
-  const [form, setForm] = useState<DocumentData>({
-    ...(initial ?? {}),
-    title: asText(initial?.title),
-    customer: asText(initial?.customer),
-    price: asMoney(initial?.price),
-    deadline: asDate(initial?.deadline),
-    notes: asText(initial?.notes),
-  });
-  const change = (name: string, value: string) => setForm((s) => ({ ...s, [name]: value }));
+  onSubmit: (payload: any) => void;
+  onCancel: () => void;
+};
 
-  return (
-    <form id={formId} className="th-form" onSubmit={(e) => { e.preventDefault(); onSubmit(form); }}>
-      <Section title="Документ">
-        <Row>
-          <Field label="Название" name="title" value={form.title || ''} onChange={change} />
-          <Field label="Заказчик" name="customer" value={form.customer || ''} onChange={change} />
-        </Row>
-        <Row>
-          <Field label="Стоимость" name="price" value={form.price || ''} onChange={change} />
-          <Field label="Срок" name="deadline" value={form.deadline || ''} onChange={change} />
-        </Row>
-        <Field label="Заметки" name="notes" type="textarea" value={form.notes || ''} onChange={change} />
-      </Section>
-    </form>
-  );
-}
-
-/* ===== Основной компонент ===== */
-export default function DocumentForm({ envelope, initial, onSubmit, onCancel, formId }: Props) {
+export default function DocumentForm({ formId, envelope, initial, onSubmit, onCancel }: Props) {
   const typeRaw = envelope?.response?.type || envelope?.ml_data?.intent || '';
-  const normalized = useMemo(() => String(typeRaw).toLowerCase(), [typeRaw]);
-  const entities = envelope?.ml_data?.entities || {};
+  const normalized = useMemo(() => baseType(typeRaw), [typeRaw]);
 
-  if (!envelope) {
-    return <GenericCreateForm formId={formId} initial={initial} onSubmit={onSubmit} />;
-  }
+  // Поднять payload из response.data.{...}_data
+  const responsePayload = useMemo(() => {
+    const key = payloadKeyFor(normalized);
+    const data = envelope?.response?.data || {};
+    return key && data && typeof data === 'object' ? (data as any)[key] ?? {} : {};
+  }, [normalized, envelope]);
 
-  /* обязательные поля — всегда рендерим; предзаполняем, если есть */
-  const req = useMemo(() => requiredByType(normalized), [normalized]);
+  // Merge: responsePayload + ML.entities
+  const [entities, setEntities] = useState<Record<string, any>>(() => {
+    const ml = envelope?.ml_data?.entities || {};
+    return { ...(responsePayload || {}), ...(ml || {}) };
+  });
 
-  const buildReqInit = () =>
-    req.reduce<Record<string, string>>((acc, f) => {
-      const raw = entities[f.key];
-      const val =
-        f.type === 'date' ? asDate(raw) :
-        f.type === 'money' ? asMoney(raw) :
-        f.type === 'number' ? asText(raw) :
-        f.type === 'textarea' ? asText(raw) :
-        asText(raw);
-      acc[f.key] = val; // даже если пусто — поле нужно отрендерить
-      return acc;
-    }, {});
-
-  const [requiredState, setRequiredState] = useState<Record<string, string>>(buildReqInit());
   useEffect(() => {
-    setRequiredState(buildReqInit());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [normalized, entities]);
+    const ml = envelope?.ml_data?.entities || {};
+    setEntities({ ...(responsePayload || {}), ...(ml || {}) });
+  }, [responsePayload, envelope]);
 
-  const onChangeReq = (name: string, value: string) =>
+  // Required
+  const req = requiredByType(normalizeType(typeRaw));
+  const [requiredState, setRequiredState] = useState<Record<string, string>>(() =>
+    Object.fromEntries(req.map((f) => [f.key, '']))
+  );
+
+  const onChangeReq = (name: string, value: string) => {
     setRequiredState((s) => ({ ...s, [name]: value }));
+  };
 
-  const submitAll = (e: React.FormEvent) => {
+  const onChange = (name: string, value: string) => {
+    setEntities((s) => ({ ...s, [name.replace(/^entities\./, '')]: value }));
+  };
+
+  const submitAll: React.FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
     onSubmit({
       __doc_type: normalized,
       required: requiredState,
       entities,
-      status: envelope.status,
-      response: envelope.response,
-      ml_data: { intent: envelope.ml_data?.intent, confidence: envelope.ml_data?.confidence },
+      status: envelope!.status,
+      response: envelope!.response,
+      ml_data: { intent: envelope!.ml_data?.intent, confidence: envelope!.ml_data?.confidence }
     });
   };
 
-  const excludeKeys = useMemo(() => req.map((f) => f.key), [req]);
+  if (!envelope) {
+    return <div>Нет данных.</div>;
+  }
 
   return (
     <form id={formId} className="th-form" onSubmit={submitAll}>
@@ -426,21 +429,24 @@ export default function DocumentForm({ envelope, initial, onSubmit, onCancel, fo
         </Section>
       )}
 
-      {/* Системные/Response/ML */}
-      <SystemGroup status={envelope.status} onChange={() => {}} />
-      <ResponseGroup response={envelope.response} onChange={() => {}} />
-      <MLGroup ml={envelope.ml_data} onChange={() => {}} />
+      {/* Системные/Response/ML — readonly */}
+      <SystemGroup status={envelope.status} />
+      <ResponseGroup response={envelope.response} normalized={normalized} />
+      <MLGroup ml={envelope.ml_data} />
 
-      {/* Entities без дублирования обязательных ключей */}
+      {/* Entities */}
       <EntitiesGroup
-        type={normalized}
+        normalized={normalized}
         entities={entities}
-        excludeKeys={excludeKeys}
+        excludeKeys={req.map((f) => f.key)}
         onChange={() => {}}
       />
 
-      {/* Если появятся поля на корне, не входящие в стандарт */}
-      <OtherRootGroup envelope={envelope as any} onChange={() => {}} />
+      {/* Кнопки */}
+      <div className="th-actions">
+        <button type="button" className="th-btn th-btn--ghost" onClick={onCancel}>Отмена</button>
+        <button type="submit" className="th-btn th-btn--primary">Сохранить</button>
+      </div>
     </form>
   );
 }

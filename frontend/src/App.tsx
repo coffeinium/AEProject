@@ -38,47 +38,69 @@ export default function App() {
     setOpenModal(true);
   };
 
+  /** ===== Helpers для нормализации типа и мержа payload->entities ===== */
+  const normalizeType = (t: string) =>
+    (t || '').toLowerCase().replace(/_needs_more_info$/, '');
+
+  const groupOf = (t: string) => {
+    const n = normalizeType(t);
+    return n.includes('company') ? 'company'
+         : n.includes('contract') ? 'contract'
+         : n.includes('session')  ? 'session'
+         : n;
+  };
+
+  const payloadKeyFor = (n: string) =>
+    n.includes('contract') ? 'contract_data'
+  : n.includes('session')  ? 'session_data'
+  : n.includes('company')  ? 'company_data'
+  : null;
+
+  const mergeEntities = (e: BackendEnvelope) => {
+    const tNorm = normalizeType(e.response?.type ?? e.ml_data?.intent ?? '');
+    const key = payloadKeyFor(tNorm);
+    const fromData =
+      key && e.response?.data && typeof e.response.data === 'object'
+        ? (e.response.data as any)[key] ?? {}
+        : {};
+    return { ...(fromData || {}), ...(e.ml_data?.entities || {}) };
+  };
+
   // Ищем envelope подходящего типа под выбранную подсказку
   const envelopeForForm = React.useMemo<BackendEnvelope | null>(() => {
-  if (!envelopes?.length) return null;
+    if (!envelopes?.length) return null;
 
-  const typeOf = (e: BackendEnvelope) =>
-    (e.response?.type ?? e.ml_data?.intent ?? '').toString().toLowerCase();
+    const typeOf = (e: BackendEnvelope) =>
+      normalizeType(e.response?.type ?? e.ml_data?.intent ?? '');
 
-  const groupOf = (t: string) =>
-    t.startsWith('company') ? 'company' :
-    t.startsWith('contract') ? 'contract' :
-    t.startsWith('session') ? 'session' : t;
+    const pickedType = normalizeType(picked?.payload?.__type ?? '');
 
-  const pickedType = picked?.payload?.__type?.toString()?.toLowerCase();
-  if (pickedType) {
-    // 1) точное совпадение
-    const exact = envelopes.find(e => typeOf(e) === pickedType);
-    if (exact) return exact;
+    if (pickedType) {
+      // 1) точное совпадение (с нормализацией)
+      const exact = envelopes.find(e => typeOf(e) === pickedType);
+      if (exact) return exact;
 
-    // 2) совпадение по группе (company/contract/session)
-    const g = groupOf(pickedType);
-    const byGroup = envelopes.find(e => groupOf(typeOf(e)) === g);
-    if (byGroup) return byGroup;
+      // 2) совпадение по группе
+      const g = groupOf(pickedType);
+      const byGroup = envelopes.find(e => groupOf(typeOf(e)) === g);
+      if (byGroup) return byGroup;
 
-    // 3) совпадение по сигнатуре entities
-    const sig: Record<string, string[]> = {
-      company: ['company_name','name','company_inn','company_ogrn'],
-      contract: ['contract_id','contract_amount','customer_name','supplier_name'],
-      session:  ['session_name','session_id','session_amount','customer_name','supplier_name'],
-    };
-    const byEntities = envelopes.find(e => {
-      const ents = e.ml_data?.entities || {};
-      return (sig[g] || []).some(k => k in ents);
-    });
-    if (byEntities) return byEntities;
-  }
+      // 3) совпадение по «сигнатуре» ключей в merged entities
+      const sig: Record<string, string[]> = {
+        company:  ['company_name','name','company_inn','company_ogrn'],
+        contract: ['contract_id','contract_amount','customer_name','supplier_name'],
+        session:  ['session_name','session_id','session_amount','customer_name','supplier_name'],
+      };
+      const byEntities = envelopes.find(e => {
+        const ents = mergeEntities(e);
+        return (sig[g] || []).some(k => k in ents);
+      });
+      if (byEntities) return byEntities;
+    }
 
-  // иначе — первый
-  return envelopes[0] ?? null;
+    // иначе — первый
+    return envelopes[0] ?? null;
   }, [envelopes, picked]);
-
-
 
   const modalTitle = React.useMemo(() => {
     if (envelopeForForm) {
@@ -104,7 +126,7 @@ export default function App() {
           onCreate={handleCreate}
           onSelectSuggestion={(s) => setPicked(s)}
         />
-      </main>      
+      </main>
 
       <Modal
         open={openModal}

@@ -1,130 +1,224 @@
 [
   {
     "status": "success",
-    "response": { "type": "company_search", "data": null },
+    "response": {
+      "type": "company_search",
+      "data": {
+        "type": "company_search",
+        "status": "ok",
+        "message": "Поиск компании выполнен",
+        "company_data": {
+          "name": "ООО ГОВНО ПРОТИВ МОЧИ"
+        },
+        "missing_fields": [],
+        "suggestions": []
+      }
+    },
     "ml_data": {
       "intent": "company_search",
       "confidence": 0.95,
-      "entities": { "name": "ООО ГОВНО ПРОТИВ МОЧИ" }
+      "entities": {
+        "name": "ООО ГОВНО ПРОТИВ МОЧИ"
+      },
+      "details": null
     }
   },
   {
     "status": "success",
-    "response": { "type": "contract_search", "data": null },
+    "response": {
+      "type": "contract_search",
+      "data": {
+        "type": "contract_search",
+        "status": "ok",
+        "message": "Поиск контракта выполнен",
+        "contract_data": {
+          "contract_id": "210293850",
+          "contract_amount": "129996.7",
+          "contract_date": "2025-09-16T10:55:58.493",
+          "customer_name": "ГОСУДАРСТВЕННОЕ ПРОФЕССИОНАЛЬНОЕ ОБРАЗОВАТЕЛЬНОЕ УЧРЕЖДЕНИЕ \"КУЗБАССКИЙ ТРАНСПОРТНО-ТЕХНОЛОГИЧЕСКИЙ ТЕХНИКУМ\"",
+          "customer_inn": "4211008542",
+          "supplier_name": "ИП ШКУРКО МАКСИМ ВАЛЕРЬЕВИЧ",
+          "supplier_inn": "420533631807",
+          "law_basis": "44-ФЗ"
+        },
+        "missing_fields": [],
+        "suggestions": []
+      }
+    },
     "ml_data": {
       "intent": "contract_search",
       "confidence": 0.95,
       "entities": {
-        "contract_id": 210293850,
-        "contract_amount": 129996.7,
-        "contract_date": "2025-09-16 10:55:58.493",
-        "category_pp_first_position": null,
+        "contract_id": "210293850",
+        "contract_amount": "129996.7",
+        "contract_date": "2025-09-16T10:55:58.493",
         "customer_name": "ГОСУДАРСТВЕННОЕ ПРОФЕССИОНАЛЬНОЕ ОБРАЗОВАТЕЛЬНОЕ УЧРЕЖДЕНИЕ \"КУЗБАССКИЙ ТРАНСПОРТНО-ТЕХНОЛОГИЧЕСКИЙ ТЕХНИКУМ\"",
-        "customer_inn": 4211008542,
+        "customer_inn": "4211008542",
         "supplier_name": "ИП ШКУРКО МАКСИМ ВАЛЕРЬЕВИЧ",
-        "supplier_inn": 420533631807,
+        "supplier_inn": "420533631807",
         "law_basis": "44-ФЗ"
-      }
+      },
+      "details": null
     }
   },
   {
     "status": "success",
-    "response": { "type": "session_search", "data": null },
+    "response": {
+      "type": "session_search",
+      "data": {
+        "type": "session_search",
+        "status": "ok",
+        "message": "Поиск закупочной сессии выполнен",
+        "session_data": {
+          "session_id": "10044030",
+          "session_name": "Фильтры очистки воды  для нужд эндоскопического отделения филиала «Великолукский межрайонный» ГБУЗ ПО «ПОКБ»",
+          "session_amount": "23974.86",
+          "session_created_date": "2025-09-16T14:38:20.607",
+          "session_completed_date": "2025-09-16T17:38:21.503",
+          "customer_name": "ГОСУДАРСТВЕННОЕ БЮДЖЕТНОЕ УЧРЕЖДЕНИЕ ЗДРАВООХРАНЕНИЯ ПСКОВСКОЙ ОБЛАСТИ \"ПСКОВСКАЯ ОБЛАСТНАЯ КЛИНИЧЕСКАЯ БОЛЬНИЦА\"",
+          "customer_inn": "6027024000",
+          "supplier_name": "ООО \"ВЕРИТАС\"",
+          "supplier_inn": "7730305047",
+          "law_basis": "44-ФЗ"
+        },
+        "missing_fields": [],
+        "suggestions": []
+      }
+    },
     "ml_data": {
       "intent": "session_search",
       "confidence": 0.95,
       "entities": {
+        "session_id": "10044030",
         "session_name": "Фильтры очистки воды  для нужд эндоскопического отделения филиала «Великолукский межрайонный» ГБУЗ ПО «ПОКБ»",
-        "session_id": 10044030,
-        "session_amount": 23974.86,
-        "session_created_date": "2025-09-16 14:38:20.607",
-        "session_completed_date": "2025-09-16 17:38:21.503",
-        "category_pp_first_position": null,
+        "session_amount": "23974.86",
+        "session_created_date": "2025-09-16T14:38:20.607",
+        "session_completed_date": "2025-09-16T17:38:21.503",
         "customer_name": "ГОСУДАРСТВЕННОЕ БЮДЖЕТНОЕ УЧРЕЖДЕНИЕ ЗДРАВООХРАНЕНИЯ ПСКОВСКОЙ ОБЛАСТИ \"ПСКОВСКАЯ ОБЛАСТНАЯ КЛИНИЧЕСКАЯ БОЛЬНИЦА\"",
-        "customer_inn": 6027024000,
+        "customer_inn": "6027024000",
         "supplier_name": "ООО \"ВЕРИТАС\"",
-        "supplier_inn": 7730305047,
+        "supplier_inn": "7730305047",
         "law_basis": "44-ФЗ"
-      }
+      },
+      "details": null
     }
   },
   {
     "status": "success",
-    "response": { "type": "session_search", "data": null },
-    "ml_data": {
-      "intent": "session_search",
-      "confidence": 0.95,
-      "entities": {
-        "session_name": "Фильтры очистки воды  для нужд эндоскопического отделения филиала «Великолукский межрайонный» ГБУЗ ПО «ПОКБ»",
-        "session_id": 10044030,
-        "session_amount": 23974.86,
-        "session_created_date": "2025-09-16 14:38:20.607",
-        "session_completed_date": "2025-09-16 17:38:21.503",
-        "category_pp_first_position": null,
-        "customer_name": "ГОСУДАРСТВЕННОЕ БЮДЖЕТНОЕ УЧРЕЖДЕНИЕ ЗДРАВООХРАНЕНИЯ ПСКОВСКОЙ ОБЛАСТИ \"ПСКОВСКАЯ ОБЛАСТНАЯ КЛИНИЧЕСКАЯ БОЛЬНИЦА\"",
-        "customer_inn": 6027024000,
-        "supplier_name": "ООО \"ВЕРИТАС\"",
-        "supplier_inn": 7730305047,
-        "law_basis": "44-ФЗ"
+    "response": {
+      "type": "create_session_needs_more_info",
+      "data": {
+        "type": "create_session_needs_more_info",
+        "status": "needs_more_info",
+        "message": "Для создания закупочной сессии нужна дополнительная информация",
+        "session_data": {
+          "session_name": "Закупка фильтров для отделения",
+          "session_amount": "25000.00",
+          "session_created_date": "2025-09-21T06:00:00.000Z"
+        },
+        "missing_fields": [
+          "customer_name",
+          "customer_inn",
+          "law_basis"
+        ],
+        "suggestions": [
+          "Укажите заказчика (например: ГБУЗ ПО «ПОКБ»)",
+          "Укажите ИНН заказчика (10 или 12 цифр)",
+          "Укажите правовое основание (например: 44-ФЗ)"
+        ]
       }
-    }
-  },
-  {
-    "status": "success",
-    "response": { "type": "create_session", "data": null },
+    },
     "ml_data": {
       "intent": "create_session",
-      "confidence": 0.95,
+      "confidence": 0.61,
       "entities": {
-        "session_name": "Фильтры очистки воды  для нужд эндоскопического отделения филиала «Великолукский межрайонный» ГБУЗ ПО «ПОКБ»",
-        "session_id": 10044030,
-        "session_amount": 23974.86,
-        "session_created_date": "2025-09-16 14:38:20.607",
-        "session_completed_date": "2025-09-16 17:38:21.503",
-        "category_pp_first_position": null,
-        "customer_name": "ГОСУДАРСТВЕННОЕ БЮДЖЕТНОЕ УЧРЕЖДЕНИЕ ЗДРАВООХРАНЕНИЯ ПСКОВСКОЙ ОБЛАСТИ \"ПСКОВСКАЯ ОБЛАСТНАЯ КЛИНИЧЕСКАЯ БОЛЬНИЦА\"",
-        "customer_inn": 6027024000,
-        "supplier_name": "ООО \"ВЕРИТАС\"",
-        "supplier_inn": 7730305047,
-        "law_basis": "44-ФЗ"
-      }
+        "session_name": "Закупка фильтров для отделения",
+        "amount": "25000.00"
+      },
+      "details": null
     }
   },
   {
     "status": "success",
-    "response": { "type": "create_contract", "data": null },
+    "response": {
+      "type": "create_contract_needs_more_info",
+      "data": {
+        "type": "create_contract_needs_more_info",
+        "status": "needs_more_info",
+        "message": "Для создания контракта нужна дополнительная информация",
+        "contract_data": {
+          "contract_name": "на канцтовары 50000 рублей",
+          "contract_amount": "50000.0",
+          "contract_date": "2025-09-21T02:56:10.989222"
+        },
+        "missing_fields": [
+          "customer_name",
+          "customer_inn"
+        ],
+        "suggestions": [
+          "Укажите название заказчика (например: ООО Ромашка)",
+          "Укажите ИНН заказчика (10 или 12 цифр)"
+        ]
+      }
+    },
     "ml_data": {
       "intent": "create_contract",
-      "confidence": 0.95,
+      "confidence": 0.4831611800523468,
       "entities": {
-        "contract_id": 210293850,
-        "contract_amount": 129996.7,
-        "contract_date": "2025-09-16 10:55:58.493",
-        "category_pp_first_position": null,
-        "customer_name": "ГОСУДАРСТВЕННОЕ ПРОФЕССИОНАЛЬНОЕ ОБРАЗОВАТЕЛЬНОЕ УЧРЕЖДЕНИЕ \"КУЗБАССКИЙ ТРАНСПОРТНО-ТЕХНОЛОГИЧЕСКИЙ ТЕХНИКУМ\"",
-        "customer_inn": 4211008542,
-        "supplier_name": "ИП ШКУРКО МАКСИМ ВАЛЕРЬЕВИЧ",
-        "supplier_inn": 420533631807,
-        "law_basis": "44-ФЗ"
-      }
+        "contract_name": "на канцтовары 50000 рублей",
+        "amount": "50000.0",
+        "document_id": "50000"
+      },
+      "details": null
     }
   },
   {
     "status": "success",
-    "response": { "type": "create_company_profile", "data": null },
+    "response": {
+      "type": "create_company_profile_needs_more_info",
+      "data": {
+        "type": "create_company_profile_needs_more_info",
+        "status": "needs_more_info",
+        "message": "Для создания профиля компании нужна дополнительная информация",
+        "company_data": {
+          "company_name": "ООО Ромашка"
+        },
+        "missing_fields": [
+          "company_inn",
+          "company_ogrn"
+        ],
+        "suggestions": [
+          "Укажите ИНН компании (10 или 12 цифр)",
+          "Укажите ОГРН компании (13 цифр)"
+        ]
+      }
+    },
     "ml_data": {
       "intent": "create_company_profile",
-      "confidence": 0.95,
+      "confidence": 0.58,
       "entities": {
-        "company_name": "ООО ГОВНО ПРОТИВ МОЧИ",
-        "company_inn": 1234567890,
-        "company_ogrn": 123456789012345
-      }
+        "company_name": "ООО Ромашка"
+      },
+      "details": null
     }
   },
   {
     "status": "error",
-    "response": { "type": "error", "data": "Описание ошибки" },
-    "ml_data": { "intent": "error", "confidence": null, "entities": {} }
+    "response": {
+      "type": "error",
+      "data": {
+        "type": "error",
+        "status": "error",
+        "message": "Описание ошибки",
+        "missing_fields": [],
+        "suggestions": []
+      }
+    },
+    "ml_data": {
+      "intent": "error",
+      "confidence": null,
+      "entities": {},
+      "details": null
+    }
   }
 ]
