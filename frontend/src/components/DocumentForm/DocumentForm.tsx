@@ -351,7 +351,7 @@ function EntitiesGroup({
 
 type Props = {
   formId: string;
-  envelope?: BackendEnvelope;
+  envelope?: BackendEnvelope | null; // <-- было только BackendEnvelope | undefined
   initial?: DocumentData;
   onSubmit: (payload: any) => void;
   onCancel: () => void;
