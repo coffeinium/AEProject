@@ -1,240 +1,147 @@
-import React, { useState, useEffect, useRef, FormEvent, KeyboardEvent } from 'react';
+// src/components/SearchBar/SearchBar.tsx
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './searchbar.css';
-import SearchIcon from '@/icons/search.svg?react';
-import CloseIcon from '@/icons/close.svg?react';
-import DocAddIcon from '@/icons/document-add.svg?react';
-import { getSuggest } from '@/lib/api';
-
-type Suggest = { label: string; payload: any };
+import { searchHistorySuggestions } from '@/lib/api';
+import { SUGGEST_DEBOUNCE_MS, SUGGEST_MIN_TOKEN } from '@/lib/config';
 
 type Props = {
   placeholder?: string;
   onSearch: (q: string) => void | Promise<void>;
-  onCreate: (payload: any) => void;
-  onSelectSuggestion?: (s: Suggest) => void;
+  onCreate: () => void;
 };
 
-const LS_KEY = 'th_suggest_history';
-const HISTORY_LIMIT = 50;
+function lastToken(s: string) {
+  const trimmed = s.replace(/\s+$/, '');
+  const parts = trimmed.split(/\s+/);
+  return parts[parts.length - 1] ?? '';
+}
 
-export default function SearchBar({
-  placeholder = 'Поиск…',
-  onSearch,
-  onCreate,
-  onSelectSuggestion,
-}: Props) {
+export default function SearchBar({ placeholder = 'Поиск…', onSearch, onCreate }: Props) {
   const [q, setQ] = useState('');
-  const [suggestions, setSuggestions] = useState<Suggest[]>([]);
-  const [show, setShow] = useState(false);
+  const [suggests, setSuggests] = useState<string[]>([]);
+  const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState<number>(-1);
-  const [picked, setPicked] = useState<Suggest | null>(null);
-  const [history, setHistory] = useState<Suggest[]>([]);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<number | null>(null);
 
-  const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
-  const skipSuggestRef = useRef(false);
-
-  // history load/save
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(LS_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) setHistory(parsed);
-      }
-    } catch {}
-  }, []);
-  useEffect(() => {
-    try { localStorage.setItem(LS_KEY, JSON.stringify(history.slice(0, HISTORY_LIMIT))); } catch {}
-  }, [history]);
-
-  const addToHistory = (s: Suggest) => setHistory((p) => [s, ...p].slice(0, HISTORY_LIMIT));
-  const clearHistory = () => setHistory([]);
-
-  // suggestions
-  useEffect(() => {
-    if (skipSuggestRef.current) { skipSuggestRef.current = false; return; }
-    const lastToken = q.trim().split(/\s+/).pop() || '';
-    const shouldFire = lastToken.length >= 2 || (q.endsWith(' ') && q.trim().length > 0);
-    const t = window.setTimeout(async () => {
-      if (!shouldFire) { setSuggestions([]); setShow(false); setActiveIdx(-1); return; }
-      try {
-        const list = await getSuggest(q);
-        const arr = Array.isArray(list) ? list : [];
-        setSuggestions(arr);
-        setShow(arr.length > 0);
-        setActiveIdx(arr.length ? 0 : -1);
-      } catch {}
-    }, 300);
-    return () => clearTimeout(t);
+  const shouldQueryHistory = useMemo(() => {
+    if (!q) return false;
+    const spaceEnded = /\s$/.test(q);
+    const tok = lastToken(q);
+    return spaceEnded || tok.length >= SUGGEST_MIN_TOKEN;
   }, [q]);
 
-  // click outside
+  useEffect(() => {
+    if (!shouldQueryHistory) {
+      setSuggests([]);
+      setOpen(false);
+      return;
+    }
+    if (timerRef.current) window.clearTimeout(timerRef.current);
+    timerRef.current = window.setTimeout(async () => {
+      try {
+        const items = await searchHistorySuggestions(q);
+        setSuggests(items);
+        setOpen(items.length > 0);
+        setActiveIdx(-1);
+      } catch {
+        setSuggests([]);
+        setOpen(false);
+      }
+    }, SUGGEST_DEBOUNCE_MS);
+    return () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+    };
+  }, [q, shouldQueryHistory]);
+
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
-      if (!show) return;
-      const t = e.target as Node;
-      if (!document.getElementById('th-search-form')?.contains(t)) {
-        setShow(false); setActiveIdx(-1);
-      }
+      if (!boxRef.current) return;
+      if (!boxRef.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
-  }, [show]);
+  }, []);
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    const value = q.trim();
-    if (!value) return;
-    await onSearch(value);
-    setShow(false);
+  const submit = (value?: string) => {
+    const text = (value ?? q).trim();
+    if (!text) return;
+    setOpen(false);
+    onSearch(text);
   };
 
-  const selectSuggestion = async (s: Suggest) => {
-    setShow(false);
-    setActiveIdx(-1);
-    skipSuggestRef.current = true;
-    setQ(s.label);
-    setPicked(s);
-    onSelectSuggestion?.(s);
-    addToHistory(s);
-    await onSearch(s.label);
-  };
-
-  const selectHistory = async (s: Suggest) => {
-    setQ(s.label);
-    setPicked(s);
-    skipSuggestRef.current = true;
-    setShow(false);
-    await onSearch(s.label);
-  };
-
-  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (!show || suggestions.length === 0) return;
+  const onKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
+    if (!open || suggests.length === 0) {
+      if (e.key === 'Enter') submit();
+      return;
+    }
     if (e.key === 'ArrowDown') {
-      e.preventDefault(); const next = (activeIdx + 1) % suggestions.length; setActiveIdx(next); scrollActiveIntoView(next);
+      e.preventDefault();
+      setActiveIdx((p) => (p + 1) % suggests.length);
     } else if (e.key === 'ArrowUp') {
-      e.preventDefault(); const prev = (activeIdx - 1 + suggestions.length) % suggestions.length; setActiveIdx(prev); scrollActiveIntoView(prev);
+      e.preventDefault();
+      setActiveIdx((p) => (p - 1 + suggests.length) % suggests.length);
     } else if (e.key === 'Enter') {
-      if (activeIdx >= 0 && activeIdx < suggestions.length) { e.preventDefault(); selectSuggestion(suggestions[activeIdx]); }
-    } else if (e.key === 'Escape') { setShow(false); setActiveIdx(-1); }
+      e.preventDefault();
+      const pick = activeIdx >= 0 ? suggests[activeIdx] : q;
+      submit(pick);
+    } else if (e.key === 'Escape') {
+      setOpen(false);
+    }
   };
-
-  const scrollActiveIntoView = (idx: number) => {
-    const list = listRef.current; if (!list) return;
-    const item = list.querySelectorAll('li')[idx] as HTMLElement | undefined; if (!item) return;
-    const { top: ct, bottom: cb } = list.getBoundingClientRect();
-    const { top: it, bottom: ib } = item.getBoundingClientRect();
-    if (it < ct) list.scrollTop -= (ct - it); else if (ib > cb) list.scrollTop += (ib - cb);
-  };
-
-  const clear = () => { setQ(''); setSuggestions([]); setShow(false); setActiveIdx(-1); setPicked(null); inputRef.current?.focus(); };
-
-  const createClick = () => {
-    const fromPicked = picked?.payload;
-    const exact = suggestions.find((s) => s.label === q)?.payload;
-    const first = suggestions[0]?.payload;
-    onCreate(fromPicked ?? exact ?? first ?? {});
-  };
-
-  const keyFor = (s: Suggest, i: number) => `${(s.label ?? '').trim().replace(/\s+/g, ' ').toLowerCase()}#${i}`;
 
   return (
-    <div className="th-search-wrapper">
-      <form id="th-search-form" className="th-search" onSubmit={submit} role="search">
-        <SearchIcon className="th-search__icon" aria-hidden />
+    <div className="searchbar" ref={boxRef}>
+      <div className="searchbar__row">
+        <button
+          type="button"
+          className="searchbar__create"
+          aria-label="Создать документ"
+          title="Создать документ"
+          onClick={onCreate}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z" />
+          </svg>
+        </button>
+
         <input
-          ref={inputRef}
+          className="searchbar__input"
+          placeholder={placeholder}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder={placeholder}
-          className="th-search__input"
-          aria-autocomplete="list"
-          aria-expanded={show}
-          aria-controls="th-suggest-list"
-          onFocus={() => suggestions.length && setShow(true)}
+          onFocus={() => setOpen(suggests.length > 0)}
           onKeyDown={onKeyDown}
         />
 
-        {q && (
-          <button
-            type="button"
-            className="th-search__clear"
-            onClick={clear}
-            title="Очистить"
-            aria-label="Очистить"
-          >
-            <CloseIcon className="th-clear__icon" />
-          </button>
-        )}
-
         <button
           type="button"
-          className="th-search__create"
-          title="Создать документ"
-          aria-label="Создать документ"
-          onClick={createClick}
+          className="searchbar__go"
+          onClick={() => submit()}
+          title="Искать"
         >
-          <DocAddIcon className="th-clear__icon" />
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M15.5 14h-.79l-.28-.27a6.471 6.471 0 0 0 1.57-4.23A6.5 6.5 0 1 0 9.5 15a6.471 6.471 0 0 0 4.23-1.57l.27.28v.79l5 5 1.5-1.5-5-5zM4 9.5C4 6.46 6.46 4 9.5 4S15 6.46 15 9.5 12.54 15 9.5 15 4 12.54 4 9.5z" />
+          </svg>
         </button>
+      </div>
 
-        {/* ВЫПАДАШКА ПЕРЕНЕСЕНА ВНУТРЬ ФОРМЫ, ЯКОРЬ — .th-search */}
-        {show && suggestions.length > 0 && (
-          <ul
-            ref={listRef}
-            id="th-suggest-list"
-            className="th-suggestions"
-            role="listbox"
-            aria-label="Подсказки"
-          >
-            {suggestions.map((s, i) => (
-              <li
-                key={keyFor(s, i)}
-                role="option"
-                aria-selected={i === activeIdx}
-                className={i === activeIdx ? 'is-active' : undefined}
-                onMouseDown={(e) => { e.preventDefault(); selectSuggestion(s); }}
-              >
-                <div className="th-suggestion__row">
-                  <span className="th-suggestion__label">{s.label}</span>
-                  {s.payload?.__type && (
-                    <span className="th-suggestion__type">{String(s.payload.__type)}</span>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </form>
-
-      {/* История — НИЖЕ формы, список всегда поверх неё по z-index */}
-      {history.length > 0 && (
-        <div className="th-history" aria-label="История выбора">
-          <div className="th-history__header">
-            <span className="th-history__title">История</span>
-            <button
-              type="button"
-              className="th-history__reset"
-              onClick={clearHistory}
-              aria-label="Сбросить историю"
-              title="Сбросить историю"
+      {open && suggests.length > 0 && (
+        <div className="searchbar__dropdown" role="listbox">
+          {suggests.map((s, i) => (
+            <div
+              key={`${s}-${i}`}
+              role="option"
+              aria-selected={i === activeIdx}
+              className={`searchbar__item ${i === activeIdx ? 'is-active' : ''}`}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                submit(s);
+              }}
             >
-              Сбросить
-            </button>
-          </div>
-          <ul className="th-history__list">
-            {history.map((h, i) => (
-              <li
-                key={keyFor(h, i)}
-                className="th-history__item"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => selectHistory(h)}
-                title={h.label}
-              >
-                {h.label}
-              </li>
-            ))}
-          </ul>
+              {s}
+            </div>
+          ))}
         </div>
       )}
     </div>

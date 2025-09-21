@@ -1,149 +1,77 @@
-import React from 'react';
-import './app.css';
-
+// src/App.tsx
+import React, { useEffect, useState } from 'react';
 import SearchBar from '@/components/SearchBar/SearchBar';
+import History from '@/components/History/History';
+import { fetchHistory, search, type HistoryRecord, type SearchResponse } from '@/lib/api';
+import { HISTORY_LIMIT } from '@/lib/config';
 import Modal from '@/components/Modal/Modal';
-import DocumentForm, { DocumentData } from '@/components/DocumentForm/DocumentForm';
-import LikeDislike from '@/components/LikeDislike/LikeDislike';
+import ContractForm from '@/components/Forms/ContractForm';
 
-import { analyzeQuery, BackendEnvelope } from '@/lib/api';
+type AnyData = Record<string, any>;
 
 export default function App() {
-  // UI state
-  const [openModal, setOpenModal] = React.useState(false);
+  const [history, setHistory] = useState<HistoryRecord[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formType, setFormType] = useState<'contract' | 'none'>('none');
+  const [contractData, setContractData] = useState<any | null>(null); // данные для формы
 
-  // Данные для форм/модалки
-  const [envelopes, setEnvelopes] = React.useState<BackendEnvelope[]>([]);
-  const [initialDoc, setInitialDoc] = React.useState<DocumentData | null>(null);
+  async function loadHistory() {
+    try {
+      const items = await fetchHistory(HISTORY_LIMIT);
+      setHistory(items);
+    } catch (e) {
+      console.warn(e);
+    }
+  }
 
-  // Последняя выбранная подсказка (из выпадашки)
-  const [picked, setPicked] = React.useState<{ label: string; payload: any } | null>(null);
+  useEffect(() => {
+    loadHistory();
+  }, []);
 
-  // Поиск — наполняем envelopes массивом объектов от бэка/мока
-  const doSearch = async (q: string) => {
-    const items = await analyzeQuery(q);
-    setEnvelopes(items || []);
+  const openContractForm = (payload?: any) => {
+    setFormType('contract');
+    setContractData(payload ?? null);
+    setIsModalOpen(true);
   };
 
-  // Создать — модалка открывается ТОЛЬКО по этой кнопке
-  const handleCreate = (payload: any) => {
-    // Предзаполнение "фолбэк" формы, если не будет найден envelope по типу
-    setInitialDoc({
-      title: payload?.title ?? '',
-      customer: payload?.customer ?? '',
-      price: payload?.price ?? '',
-      deadline: payload?.deadline ?? '',
-      notes: '',
-    });
-    setOpenModal(true);
-  };
+  const handleSearch = async (q: string) => {
+    const resp: SearchResponse<AnyData> = await search(q, true, true);
+    // по доке нас интересуют create_contract_* для заполненной формы
+    const t = resp?.response?.type;
+    const data = resp?.response?.data ?? {};
 
-  /** ===== Helpers для нормализации типа и мержа payload->entities ===== */
-  const normalizeType = (t: string) =>
-    (t || '').toLowerCase().replace(/_needs_more_info$/, '');
-
-  const groupOf = (t: string) => {
-    const n = normalizeType(t);
-    return n.includes('company') ? 'company'
-         : n.includes('contract') ? 'contract'
-         : n.includes('session')  ? 'session'
-         : n;
-  };
-
-  const payloadKeyFor = (n: string) =>
-    n.includes('contract') ? 'contract_data'
-  : n.includes('session')  ? 'session_data'
-  : n.includes('company')  ? 'company_data'
-  : null;
-
-  const mergeEntities = (e: BackendEnvelope) => {
-    const tNorm = normalizeType(e.response?.type ?? e.ml_data?.intent ?? '');
-    const key = payloadKeyFor(tNorm);
-    const fromData =
-      key && e.response?.data && typeof e.response.data === 'object'
-        ? (e.response.data as any)[key] ?? {}
-        : {};
-    return { ...(fromData || {}), ...(e.ml_data?.entities || {}) };
-  };
-
-  // Ищем envelope подходящего типа под выбранную подсказку
-  const envelopeForForm = React.useMemo<BackendEnvelope | null>(() => {
-    if (!envelopes?.length) return null;
-
-    const typeOf = (e: BackendEnvelope) =>
-      normalizeType(e.response?.type ?? e.ml_data?.intent ?? '');
-
-    const pickedType = normalizeType(picked?.payload?.__type ?? '');
-
-    if (pickedType) {
-      // 1) точное совпадение (с нормализацией)
-      const exact = envelopes.find(e => typeOf(e) === pickedType);
-      if (exact) return exact;
-
-      // 2) совпадение по группе
-      const g = groupOf(pickedType);
-      const byGroup = envelopes.find(e => groupOf(typeOf(e)) === g);
-      if (byGroup) return byGroup;
-
-      // 3) совпадение по «сигнатуре» ключей в merged entities
-      const sig: Record<string, string[]> = {
-        company:  ['company_name','name','company_inn','company_ogrn'],
-        contract: ['contract_id','contract_amount','customer_name','supplier_name'],
-        session:  ['session_name','session_id','session_amount','customer_name','supplier_name'],
-      };
-      const byEntities = envelopes.find(e => {
-        const ents = mergeEntities(e);
-        return (sig[g] || []).some(k => k in ents);
-      });
-      if (byEntities) return byEntities;
+    if (t === 'create_contract_needs_more_info' || t === 'create_contract_ready_to_create') {
+      openContractForm(data);
+    } else {
+      // если тип не про контракт — всё равно откроем пустую форму (по ТЗ: модалка при поиске)
+      openContractForm(null);
     }
 
-    // иначе — первый
-    return envelopes[0] ?? null;
-  }, [envelopes, picked]);
-
-  const modalTitle = React.useMemo(() => {
-    if (envelopeForForm) {
-      return `Тип: ${envelopeForForm.response?.type ?? envelopeForForm.ml_data?.intent ?? '—'}`;
-    }
-    return 'Создание документа';
-  }, [envelopeForForm]);
-
-  const FORM_ID = 'doc-form';
+    // обновим историю
+    loadHistory();
+  };
 
   return (
-    <div className="page">
-      <header className="topbar">
-        <div className="brand">TenderHack</div>
-      </header>
+    <div style={{ padding: 16 }}>
+      <SearchBar
+        placeholder="Например: создай контракт на канцтовары 50000 рублей"
+        onSearch={handleSearch}
+        onCreate={() => openContractForm(null)}
+      />
 
-      <main className="content">
-        <h1 className="title">Поиск</h1>
+      <History items={history} onPick={(text) => handleSearch(text)} />
 
-        <SearchBar
-          placeholder="Найти тендер, команду, участника…"
-          onSearch={doSearch}
-          onCreate={handleCreate}
-          onSelectSuggestion={(s) => setPicked(s)}
-        />
-      </main>
-
-      <Modal
-        open={openModal}
-        onClose={() => setOpenModal(false)}
-        title={modalTitle}
-        width={840}
-        height="80vh"
-        formId={FORM_ID}
-        onRate={(v) => console.log('rate:', v)}
-      >
-        <DocumentForm
-          formId={FORM_ID}
-          envelope={envelopeForForm}
-          initial={initialDoc || undefined}
-          onSubmit={(data) => { console.log('CREATE DOCUMENT', data); setOpenModal(false); }}
-          onCancel={() => setOpenModal(false)}
-        />
+      <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)} title="Создание контракта">
+        {formType === 'contract' && (
+          <ContractForm
+            initial={contractData}
+            onSubmit={(values) => {
+              // здесь отправка на ваш endpoint создания контракта (когда будет готов)
+              console.log('submit contract:', values);
+              setIsModalOpen(false);
+            }}
+          />
+        )}
       </Modal>
     </div>
   );

@@ -1,149 +1,78 @@
 // src/lib/api.ts
+import { API_BASE, SEARCH_PATH, HISTORY_PATH, HISTORY_SEARCH_PATH, SUGGEST_LIMIT } from '@/lib/config';
 
-import {
-  API_BASE, SEARCH_PATH,
-  SUGGEST_METHOD, SUGGEST_MODE_KEY, SUGGEST_MODE_VALUE, SUGGEST_QUERY_KEY,
-  ANALYZE_METHOD, ANALYZE_BODY_KEY, ANALYZE_EXTRA_JSON,
-  USE_MOCK, MOCK_URL, MOCK_SUGGEST_URL
-} from '@/lib/config';
-
-export type BackendEnvelope = {
-  status: 'success' | 'error';
-  response: { type: string; data: any };
-  ml_data: { intent: string; confidence: number | null; entities: Record<string, any> };
+export type MLData = {
+  intent: string;
+  confidence: number | null;
+  entities: Record<string, any>;
+  details?: any | null;
 };
 
-type SuggestItem = { label: string; payload: any };
+export type ResponseData<T = any> = {
+  type: string;
+  data: T | null;
+};
 
-const makeURL = (base: string, params: Record<string, any>) => {
-  const u = new URL(base, window.location.origin);
-  Object.entries(params).forEach(([k, v]) => {
-    if (v === undefined || v === null) return;
-    u.searchParams.set(k, String(v));
-  });
+export type SearchResponse<T = any> = {
+  status: string;
+  response: ResponseData<T>;
+  ml_data?: MLData;
+};
+
+export type HistoryRecord = {
+  id: number;
+  timestamp: string;
+  text: string;
+  intent: string | null;
+  confidence: number | null;
+  entities: Record<string, any>;
+  created_at: string;
+};
+
+const makeURL = (path: string, params?: Record<string, any>) => {
+  const u = new URL(path, API_BASE);
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      if (v === undefined || v === null) return;
+      u.searchParams.set(k, String(v));
+    });
+  }
   return u.toString();
 };
 
-// Читает мок: массив JSON или несколько JSON-объектов, разделённых переносами
-async function loadMockArray(url: string): Promise<BackendEnvelope[]> {
-  const text = await fetch(url).then(r => r.text());
-  try {
-    const data = JSON.parse(text);
-    if (Array.isArray(data)) return data as BackendEnvelope[];
-    if (data && typeof data === 'object') return [data as BackendEnvelope];
-  } catch { /* ignore */ }
-
-  const matches = text.match(/{[\s\S]*?}(?=\s*{|\s*$)/g);
-  if (matches) {
-    const arr: BackendEnvelope[] = [];
-    for (const chunk of matches) {
-      try { arr.push(JSON.parse(chunk)); } catch { /* ignore bad chunk */ }
-    }
-    if (arr.length) return arr;
-  }
-  return [];
+// Поиск
+export async function search(query: string, detailed = true, writeInHistory = true) {
+  const url = makeURL(SEARCH_PATH, { query, detailed, write_in_history: writeInHistory });
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+  return (await res.json()) as SearchResponse;
 }
 
-export async function analyzeQuery(q: string): Promise<BackendEnvelope[]> {
-  if (USE_MOCK) {
-    return loadMockArray(MOCK_URL);
-  }
-
-  const url = `${API_BASE}${SEARCH_PATH}`;
-
-  if (ANALYZE_METHOD === 'GET') {
-    // Добавляем query в URL
-    const full = makeURL(url, { query: q, [ANALYZE_BODY_KEY]: q, ...ANALYZE_EXTRA_JSON });
-    const resp = await fetch(full);
-    if (!resp.ok) throw new Error(String(resp.status));
-    const data = await resp.json();
-    return Array.isArray(data) ? data : [data];
-  }
-
-  // Для POST тоже добавим query в URL
-  const full = makeURL(url, { query: q });
-  const resp = await fetch(full, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ [ANALYZE_BODY_KEY]: q, ...ANALYZE_EXTRA_JSON }),
-  });
-  if (!resp.ok) throw new Error(String(resp.status));
-  const data = await resp.json();
-  return Array.isArray(data) ? data : [data];
+// История (нижний блок)
+export async function fetchHistory(limit = 100) {
+  const url = makeURL(HISTORY_PATH, { limit });
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`History failed: ${res.status}`);
+  const json = (await res.json()) as SearchResponse<{
+    records: HistoryRecord[];
+    total_count: number;
+    filters: any;
+  }>;
+  return Array.isArray(json?.response?.data?.records) ? json.response.data.records : [];
 }
 
-// Подсказки: при USE_MOCK читаем из MOCK_SUGGEST_URL (если задан) или собираем из MOCK_URL
-export async function getSuggest(q: string): Promise<SuggestItem[]> {
-  if (USE_MOCK) {
-    if (MOCK_SUGGEST_URL) {
-      const text = await fetch(MOCK_SUGGEST_URL).then(r => r.text());
-      try {
-        const data = JSON.parse(text);
-        if (Array.isArray(data)) {
-          return data.map((x: any) => (typeof x === 'string' ? { label: x, payload: {} } : x));
-        }
-        if (data && typeof data === 'object') return [data];
-      } catch { /* try multi-json below */ }
-      const parts = text.match(/{[\s\S]*?}(?=\s*{|\s*$)/g);
-      if (parts) {
-        const out: any[] = [];
-        for (const chunk of parts) {
-          try { out.push(JSON.parse(chunk)); } catch { /* ignore */ }
-        }
-        if (out.length) return out;
-      }
-      return [];
-    }
-
-    const items = await loadMockArray(MOCK_URL);
-    // НЕ обрезаем список; добавляем тип и сырые entities в payload
-    return items.map((it) => {
-      const t = it?.response?.type ?? it?.ml_data?.intent ?? 'suggest';
-      const ent = it?.ml_data?.entities ?? {};
-      const title =
-        ent.company_name || ent.name || ent.session_name || ent.contract_id || t;
-
-      return {
-        label: `${String(title)}`.slice(0, 140),
-        payload: {
-          __type: t,
-          title: ent.session_name || ent.company_name || ent.name || '',
-          customer: ent.customer_name || '',
-          price: ent.contract_amount ?? ent.session_amount ?? '',
-          deadline: (ent.contract_date || ent.session_completed_date || '').toString().slice(0, 10),
-          rawEntities: ent,
-        },
-      };
-    });
-  }
-
-  const url = `${API_BASE}${SEARCH_PATH}`;
-
-  if (SUGGEST_METHOD === 'GET') {
-    // Добавляем query в URL
-    const full = makeURL(url, {
-      query: q,
-      [SUGGEST_MODE_KEY]: SUGGEST_MODE_VALUE,
-      [SUGGEST_QUERY_KEY]: q
-    });
-    const resp = await fetch(full);
-    if (!resp.ok) return [];
-    const data = await resp.json().catch(() => []);
-    return (Array.isArray(data) ? data : []).map((x: any) =>
-      typeof x === 'string' ? { label: x, payload: {} } : x
-    );
-  }
-
-  // Для POST тоже добавим query в URL
-  const full = makeURL(url, { query: q });
-  const resp = await fetch(full, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ [SUGGEST_MODE_KEY]: SUGGEST_MODE_VALUE, [SUGGEST_QUERY_KEY]: q }),
-  });
-  if (!resp.ok) return [];
-  const data = await resp.json().catch(() => []);
-  return (Array.isArray(data) ? data : []).map((x: any) =>
-    typeof x === 'string' ? { label: x, payload: {} } : x
-  );
+// Подсказки ДЛЯ ВЫПАДАШКИ — из ИСТОРИИ
+export async function searchHistorySuggestions(q: string, limit = SUGGEST_LIMIT) {
+  const url = makeURL(HISTORY_SEARCH_PATH, { q, limit });
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`History search failed: ${res.status}`);
+  const json = (await res.json()) as SearchResponse<{
+    query: string;
+    records: HistoryRecord[];
+    total_count: number;
+    limit: number;
+  }>;
+  const recs = json?.response?.data?.records ?? [];
+  // Возвращаем массив строк (text) — для выпадашки
+  return recs.map(r => r.text).filter(Boolean);
 }

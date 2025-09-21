@@ -1,17 +1,15 @@
-export const API_BASE = import.meta.env.VITE_API_BASE ?? '';
-export const SEARCH_PATH = import.meta.env.VITE_SEARCH_PATH ?? '/search';
+// src/lib/config.ts
+const env = (k: string, def?: string) => import.meta.env[k as any] ?? def;
 
-export const SUGGEST_METHOD = (import.meta.env.VITE_SUGGEST_METHOD ?? 'GET').toUpperCase(); // GET|POST
-export const SUGGEST_MODE_KEY = import.meta.env.VITE_SUGGEST_MODE_KEY ?? 'mode';
-export const SUGGEST_MODE_VALUE = import.meta.env.VITE_SUGGEST_MODE_VALUE ?? 'suggest';
-export const SUGGEST_QUERY_KEY = import.meta.env.VITE_SUGGEST_QUERY_KEY ?? 'q';
+export const API_BASE = String(env('VITE_API_BASE', 'http://localhost:8000'));
 
-export const ANALYZE_METHOD = (import.meta.env.VITE_ANALYZE_METHOD ?? 'POST').toUpperCase(); // GET|POST
-export const ANALYZE_BODY_KEY = import.meta.env.VITE_ANALYZE_BODY_KEY ?? 'text';
-export const ANALYZE_EXTRA_JSON = (() => {
-  try { return JSON.parse(import.meta.env.VITE_ANALYZE_EXTRA_JSON ?? '{}'); } catch { return {}; }
-})();
+export const SEARCH_PATH = String(env('VITE_SEARCH_PATH', '/user/search'));
+export const HISTORY_PATH = String(env('VITE_HISTORY_PATH', '/user/history'));
+export const HISTORY_SEARCH_PATH = String(env('VITE_HISTORY_SEARCH_PATH', '/user/history/search'));
 
-export const USE_MOCK = (import.meta.env.VITE_USE_MOCK ?? '0') === '1';
-export const MOCK_URL = import.meta.env.VITE_MOCK_URL ?? '/mocks/ml_responses.json';
-export const MOCK_SUGGEST_URL = import.meta.env.VITE_MOCK_SUGGEST_URL ?? ''; // опционально
+export const HISTORY_LIMIT = Number(env('VITE_HISTORY_LIMIT', '100'));
+
+// триггеры запроса истории-подсказок
+export const SUGGEST_MIN_TOKEN = Number(env('VITE_SUGGEST_MIN_TOKEN', '2'));
+export const SUGGEST_DEBOUNCE_MS = Number(env('VITE_SUGGEST_DEBOUNCE_MS', '250'));
+export const SUGGEST_LIMIT = Number(env('VITE_SUGGEST_LIMIT', '50'));

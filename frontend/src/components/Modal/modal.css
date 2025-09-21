@@ -1,53 +1,39 @@
-.th-modal__backdrop {
+/* src/components/Modal/modal.css */
+.modal__backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(17, 24, 39, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
+  background: rgba(16, 16, 24, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 100;
 }
-
-.th-modal {
+.modal__card {
+  width: min(780px, 96vw);
   background: #fff;
   border-radius: 14px;
-  box-shadow: 0 20px 50px rgba(0,0,0,.25);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  border: 1px solid #e8e8ef;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
 }
-
-.th-modal__header {
-  flex: 0 0 auto;
-  padding: 14px 16px;
-  border-bottom: 1px solid #e5e7eb;
-  font-weight: 600;
-  font-size: 16px;
-  color: #111827;
-  background: #fff;
-}
-
-.th-modal__body {
-  flex: 1 1 auto;
-  overflow-y: auto;     /* скролл внутри */
-  padding: 16px;
-  -webkit-overflow-scrolling: touch;
-}
-
-.th-modal__footer {
-  flex: 0 0 auto;
-  padding: 12px 16px;
-  border-top: 1px solid #e5e7eb;
-  background: #fff;
-}
-
-.th-footerbar {
+.modal__header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #f0f0f5;
 }
-.th-actions__spacer { flex: 1; }
-
-@media (max-height: 640px) {
-  .th-modal { height: 90vh !important; }
+.modal__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.modal__close {
+  margin-left: auto;
+  border: 1px solid #e5e5ee;
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.modal__close:hover { background: #f7f7fb; }
+.modal__body {
+  padding: 14px;
 }

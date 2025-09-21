@@ -1,82 +1,75 @@
-.th-search-wrapper {
+/* src/components/SearchBar/searchbar.css */
+
+.searchbar {
   position: relative;
   width: 100%;
-  max-width: 680px;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
-/* строка поиска — ТЕПЕРЬ опорный контейнер для выпадашки */
-.th-search {
-  position: relative;                 /* якорь для .th-suggestions */
-  display: flex;
+.searchbar__row {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
   align-items: center;
-  gap: 10px;
-  background: var(--th-surface);
-  border: 1px solid var(--th-border);
-  border-radius: var(--th-radius);
-  padding: 10px 10px 10px 14px;
-  box-shadow: var(--th-shadow);
+  gap: 8px;
 }
 
-.th-search:focus-within { box-shadow: var(--th-focus), var(--th-shadow); border-color: transparent; }
-
-.th-search__icon { width: 18px; height: 18px; color: var(--th-muted); flex: 0 0 auto; }
-.th-clear__icon { width: 16px; height: 16px; }
-
-.th-search__input {
-  flex: 1;
-  background: transparent;
-  border: none;
+.searchbar__input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid #d6d6dc;
+  border-radius: 10px;
   outline: none;
-  color: var(--th-text);
-  font-size: 15px;
+  font-size: 14px;
 }
 
-.th-search__clear,
-.th-search__create {
-  display: flex; align-items: center; justify-content: center;
-  background: transparent; border: none; padding: 4px; cursor: pointer; color: var(--th-muted);
+.searchbar__input:focus {
+  border-color: #7a7aff;
+  box-shadow: 0 0 0 3px rgba(122, 122, 255, 0.2);
 }
-.th-search__clear:hover, .th-search__create:hover { color: var(--th-text); }
 
-/* выпадающий список — позиционируется от .th-search */
-.th-suggestions {
+.searchbar__create,
+.searchbar__go {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid #d6d6dc;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.searchbar__create:hover,
+.searchbar__go:hover {
+  background: #f6f6f8;
+}
+
+.searchbar__dropdown {
   position: absolute;
-  top: calc(100% + 4px);               /* сразу под формой */
-  left: 0; right: 0;
-  max-height: 300px;
+  top: calc(100% + 6px);
+  left: 52px;   /* выравниваем под инпут */
+  right: 52px;  /* выравниваем под инпут */
+  background: #fff;
+  border: 1px solid #e4e4ea;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  max-height: 280px;          /* все элементы, скролл при переполнении */
   overflow-y: auto;
-  background: var(--th-surface);
-  border: 1px solid var(--th-border);
-  border-radius: var(--th-radius);
-  box-shadow: var(--th-shadow);
-  list-style: none;
-  margin: 0; padding: 4px 0;
-  z-index: 1000;                       /* гарантированно поверх истории */
+  z-index: 10;
+  padding: 6px;
 }
 
-.th-suggestions li { padding: 8px 12px; cursor: pointer; color: var(--th-text); }
-.th-suggestions li:hover, .th-suggestions li.is-active { background: var(--th-border); }
-
-.th-suggestion__row { display: flex; align-items: center; gap: 8px; }
-.th-suggestion__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.th-suggestion__type { flex: 0 0 auto; font-size: 12px; color: var(--th-muted); background: rgba(0,0,0,.04); border-radius: 6px; padding: 2px 6px; }
-
-/* история (ниже формы) */
-.th-history {
-  position: relative;
-  z-index: 1;
-  margin-top: 8px;
-  border: 1px solid var(--th-border);
-  border-radius: var(--th-radius);
-  background: var(--th-surface);
-  box-shadow: var(--th-shadow);
+.searchbar__item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  line-height: 1.25;
 }
 
-.th-history__header { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--th-border); }
-.th-history__title { font-weight: 600; color: var(--th-text); }
-.th-history__reset { margin-left: auto; background: transparent; border: none; color: var(--th-muted); cursor: pointer; padding: 4px 6px; }
-.th-history__reset:hover { color: var(--th-text); }
-
-.th-history__list { max-height: 160px; overflow-y: auto; list-style: none; margin: 0; padding: 6px 0; }
-.th-history__item { padding: 6px 10px; cursor: pointer; color: var(--th-text); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
-.th-history__item:hover { background: var(--th-border); }
+.searchbar__item:hover,
+.searchbar__item.is-active {
+  background: #f2f3ff;
+}
