@@ -1,4 +1,4 @@
-export const API_BASE = import.meta.env.VITE_API_BASE ?? '/api';
+export const API_BASE = import.meta.env.VITE_API_BASE ?? '';
 export const SEARCH_PATH = import.meta.env.VITE_SEARCH_PATH ?? '/search';
 
 export const SUGGEST_METHOD = (import.meta.env.VITE_SUGGEST_METHOD ?? 'GET').toUpperCase(); // GET|POST

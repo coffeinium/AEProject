@@ -100,8 +100,15 @@ async def register_routes(app, **kwargs):
     intent_handlers = IntentHandlers(storage, logger, env) if storage and env else None
     
     @app.get("/user/search", response_class=JSONResponse)
-    async def search(request: Request, query: str, detailed: bool = False, write_in_history: bool = True):
+    async def search(request: Request, query: str = "", detailed: bool = False, write_in_history: bool = True):
         try:
+            if not query or not query.strip():
+                return SearchResponse(
+                    status="error", 
+                    response=ResponseData(type="error", data="Поисковый запрос не может быть пустым"), 
+                    ml_data=MLData(intent="error", confidence=0.0, entities={})
+                )
+            
             if not ml_cic_interface.is_initialized:
                 Utils.writelog(logger=logger, level="WARNING", message="ML модель не инициализирована")
                 return SearchResponse(status="error", response=ResponseData(type="error", data="ML модель не инициализирована"), ml_data=MLData(intent="error", confidence=0.0, entities={}))
