@@ -9,6 +9,24 @@
 - **Кодировка**: UTF-8
 - **Методы аутентификации**: Не требуется (в текущей версии)
 
+### Сетевая архитектура
+
+API работает в изолированной Docker сети `ae-project-network`:
+
+- **Тип сети**: Bridge (мостовая)
+- **Подсеть**: `172.25.0.0/16`
+- **Внутренняя связь**: 
+  - Backend ↔ PostgreSQL: `postgres:5432`
+  - Frontend ↔ Backend: `backend:8000`
+- **Внешний доступ**: Только через проброшенные порты
+
+### Альтернативные порты
+
+При конфликтах портов используйте `compose.dev.for-ports-error.yaml`:
+- **PostgreSQL**: `localhost:5433` (вместо 5432)
+- **Backend API**: `localhost:8000` (без изменений)
+- **Frontend**: `localhost:5173` (без изменений)
+
 ---
 
 ## 📋 Содержание
@@ -1289,9 +1307,12 @@ curl -X POST "http://localhost:8000/api/ml/predict" \
 ### JavaScript (Fetch API)
 
 ```javascript
+// Базовый URL для внешних запросов
+const API_BASE_URL = 'http://localhost:8000';
+
 // Поиск
 async function search(query) {
-  const response = await fetch(`/user/search?${new URLSearchParams({
+  const response = await fetch(`${API_BASE_URL}/user/search?${new URLSearchParams({
     query: query,
     detailed: true
   })}`);
@@ -1300,13 +1321,13 @@ async function search(query) {
 
 // История
 async function getHistory(limit = 100) {
-  const response = await fetch(`/user/history?limit=${limit}`);
+  const response = await fetch(`${API_BASE_URL}/user/history?limit=${limit}`);
   return await response.json();
 }
 
 // Дополнение данных
 async function completeData(dataType, providedData, additionalData) {
-  const response = await fetch('/user/complete_data', {
+  const response = await fetch(`${API_BASE_URL}/user/complete_data`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -1322,7 +1343,7 @@ async function completeData(dataType, providedData, additionalData) {
 
 // ML API функции
 async function mlPredict(text, detailed = false) {
-  const response = await fetch('/api/ml/predict', {
+  const response = await fetch(`${API_BASE_URL}/api/ml/predict`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -1336,7 +1357,7 @@ async function mlPredict(text, detailed = false) {
 }
 
 async function mlPredictBatch(texts) {
-  const response = await fetch('/api/ml/predict/batch', {
+  const response = await fetch(`${API_BASE_URL}/api/ml/predict/batch`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -1349,12 +1370,12 @@ async function mlPredictBatch(texts) {
 }
 
 async function mlGetInfo() {
-  const response = await fetch('/api/ml/info');
+  const response = await fetch(`${API_BASE_URL}/api/ml/info`);
   return await response.json();
 }
 
 async function mlHealthCheck() {
-  const response = await fetch('/api/ml/health');
+  const response = await fetch(`${API_BASE_URL}/api/ml/health`);
   return await response.json();
 }
 ```
@@ -1419,6 +1440,20 @@ def ml_health_check():
 ---
 
 ## 10. Конфигурация и настройки
+
+### Docker Compose конфигурации
+
+#### Стандартная конфигурация (`compose.dev.yaml`)
+- **PostgreSQL**: `localhost:5432`
+- **Backend API**: `localhost:8000`
+- **Frontend**: `localhost:5173`
+- **Сеть**: `ae-project-network` (172.25.0.0/16)
+
+#### Альтернативная конфигурация (`compose.dev.for-ports-error.yaml`)
+- **PostgreSQL**: `localhost:5433` (изменен порт)
+- **Backend API**: `localhost:8000` (без изменений)
+- **Frontend**: `localhost:5173` (без изменений)
+- **Сеть**: `ae-project-network` (172.25.0.0/16)
 
 ### Переменные окружения
 
