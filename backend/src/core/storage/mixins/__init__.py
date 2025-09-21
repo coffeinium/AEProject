@@ -4,5 +4,6 @@
 
 from .contracts_mixin import ContractsMixin
 from .sessions_mixin import SessionsMixin
+from .history_mixin import HistoryMixin
 
-__all__ = ['ContractsMixin', 'SessionsMixin']
+__all__ = ['ContractsMixin', 'SessionsMixin', 'HistoryMixin']

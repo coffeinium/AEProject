@@ -1,7 +1,3 @@
-"""
-Роут для ML Dashboard - веб-интерфейс тестирования ML модели
-"""
-
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 
@@ -28,7 +24,7 @@ async def register_routes(app, **kwargs):
         return
     
     @app.get(
-        "/ml",
+        "/ml/admin",
         response_class=HTMLResponse,
         summary="ML Dashboard",
         description="Веб-интерфейс для тестирования и мониторинга ML модели классификации намерений",
@@ -61,11 +57,11 @@ async def register_routes(app, **kwargs):
             raise
     
     @app.get(
-        "/",
+        "/ml/admin",
         response_class=HTMLResponse,
-        summary="Главная страница",
+        summary="ML Dashboard",
         description="Перенаправление на ML Dashboard",
-        tags=["Main"]
+        tags=["ML Dashboard"]
     )
     async def root(request: Request):
         """Главная страница - перенаправляет на ML Dashboard"""
@@ -73,7 +69,7 @@ async def register_routes(app, **kwargs):
             Utils.writelog(
                 logger=logger,
                 level="INFO",
-                message="Переход на главную страницу -> ML Dashboard"
+                message="Переход на ML Dashboard"
             )
             
             return templates.TemplateResponse(

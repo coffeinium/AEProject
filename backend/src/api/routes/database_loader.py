@@ -1,7 +1,3 @@
-"""
-Автоматическая загрузка данных в БД при инициализации
-"""
-
 import os
 from ...core.base.utils import Utils
 

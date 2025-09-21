@@ -38,6 +38,17 @@ CREATE TABLE IF NOT EXISTS aeproject.sessions (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Создание таблицы истории
+CREATE TABLE IF NOT EXISTS aeproject.history (
+    id SERIAL PRIMARY KEY,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    text TEXT NOT NULL,
+    intent TEXT,
+    confidence FLOAT,
+    entities JSON,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Создание индексов для производительности
 
 -- Индексы для таблицы контрактов
@@ -58,3 +69,9 @@ CREATE INDEX IF NOT EXISTS idx_sessions_supplier_inn ON aeproject.sessions(suppl
 CREATE INDEX IF NOT EXISTS idx_sessions_law_basis ON aeproject.sessions(law_basis);
 CREATE INDEX IF NOT EXISTS idx_sessions_amount ON aeproject.sessions(session_amount);
 CREATE INDEX IF NOT EXISTS idx_sessions_created_at ON aeproject.sessions(created_at);
+
+-- Индексы для таблицы истории
+CREATE INDEX IF NOT EXISTS idx_history_timestamp ON aeproject.history(timestamp);
+CREATE INDEX IF NOT EXISTS idx_history_intent ON aeproject.history(intent);
+CREATE INDEX IF NOT EXISTS idx_history_confidence ON aeproject.history(confidence);
+CREATE INDEX IF NOT EXISTS idx_history_created_at ON aeproject.history(created_at);

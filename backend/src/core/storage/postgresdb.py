@@ -19,11 +19,12 @@ from ..services.applogger import Logger
 from ..base.utils import Utils
 from .mixins import (
     ContractsMixin, 
-    SessionsMixin
+    SessionsMixin,
+    HistoryMixin
 )
 
 
-class PostgresStorage(ContractsMixin, SessionsMixin):
+class PostgresStorage(ContractsMixin, SessionsMixin, HistoryMixin):
     """
     Главный класс для работы с PostgreSQL.
     Предоставляет универсальные методы и специализированные методы через миксины.
@@ -400,13 +401,16 @@ class PostgresStorage(ContractsMixin, SessionsMixin):
         try:
             contracts_stats = await self.get_contracts_stats()
             sessions_stats = await self.get_sessions_stats()
+            history_stats = await self.get_history_stats()
             
             overview = {
                 'contracts': contracts_stats,
                 'sessions': sessions_stats,
+                'history': history_stats,
                 'summary': {
                     'total_contracts': contracts_stats.get('total_count', {}).get('total', 0) if contracts_stats.get('total_count') else 0,
                     'total_sessions': sessions_stats.get('total_count', {}).get('total', 0) if sessions_stats.get('total_count') else 0,
+                    'total_history': history_stats.get('total_count', {}).get('total', 0) if history_stats.get('total_count') else 0,
                 }
             }
             

@@ -1,7 +1,3 @@
-"""
-API для работы с ML моделью классификации намерений
-"""
-
 from typing import Optional, Dict, Any, List
 from fastapi import HTTPException, status
 from pydantic import BaseModel, Field, validator
