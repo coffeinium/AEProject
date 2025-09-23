@@ -74,6 +74,7 @@ class IntentHandlers:
             intent_handlers = {
                 "create_contract": self._handle_create_contract,
                 "create_ks": self._handle_create_ks,
+                "create_zakupka": self._handle_create_zakupka,
                 "search_docs": self._handle_search_docs,
                 "search_company": self._handle_search_company,
                 "create_company_profile": self._handle_create_company_profile,
@@ -150,6 +151,29 @@ class IntentHandlers:
                 logger=self.logger,
                 level="ERROR",
                 message=f"Ошибка создания КС: {e}"
+            )
+            return self.text_manager.get_error_response("processing_error", error=str(e))
+    
+    async def _handle_create_zakupka(self, entities: Dict[str, Any], query: str) -> Dict[str, Any]:
+        """Обработка создания закупки."""
+        try:
+            zakupka_data = self._extract_zakupka_data(entities, query)
+            missing_fields = self._validate_zakupka_data(zakupka_data)
+            
+            if missing_fields:
+                return self.text_manager.get_creation_response(
+                    "zakupka", "needs_more_info", zakupka_data, missing_fields
+                )
+            
+            return self.text_manager.get_creation_response(
+                "zakupka", "ready_to_create", zakupka_data
+            )
+            
+        except Exception as e:
+            Utils.writelog(
+                logger=self.logger,
+                level="ERROR",
+                message=f"Ошибка создания закупки: {e}"
             )
             return self.text_manager.get_error_response("processing_error", error=str(e))
     
@@ -307,6 +331,87 @@ class IntentHandlers:
         
         return ks_data
     
+    def _extract_zakupka_data(self, entities: Dict[str, Any], query: str) -> Dict[str, Any]:
+        """Извлечение данных закупки из сущностей."""
+        zakupka_data = {}
+        
+        # Название закупки
+        zakupka_name = entities.get('procurement_name') or entities.get('zakupka_name')
+        if zakupka_name:
+            zakupka_data['procurement_name'] = self._sanitize_string(zakupka_name)
+        elif entities.get('category'):
+            category = self._sanitize_string(entities['category'])
+            zakupka_data['procurement_name'] = f"Закупка {category}"
+        
+        # Сумма закупки
+        amount = self._parse_amount_safe(entities.get('amount') or entities.get('procurement_amount'))
+        if amount is not None:
+            zakupka_data['procurement_amount'] = amount
+        
+        # Заказчик
+        customer_name = entities.get('customer_name') or entities.get('company_name')
+        if customer_name:
+            zakupka_data['customer_name'] = self._sanitize_string(customer_name)
+        
+        # ИНН заказчика
+        customer_inn = self._parse_inn_safe(entities.get('customer_inn') or entities.get('inn'))
+        if customer_inn:
+            zakupka_data['customer_inn'] = customer_inn
+        
+        # Категория закупки
+        category = entities.get('category')
+        if category:
+            zakupka_data['category'] = self._sanitize_string(category)
+        
+        # Способ закупки
+        procurement_method = entities.get('procurement_method')
+        if procurement_method:
+            zakupka_data['procurement_method'] = self._sanitize_string(procurement_method)
+        
+        # Тип закона
+        law = entities.get('law') or entities.get('law_type')
+        if law:
+            zakupka_data['law_type'] = self._sanitize_string(law)
+        
+        # Описание
+        description = entities.get('description')
+        if description:
+            zakupka_data['description'] = self._sanitize_string(description)
+        
+        # Требования
+        requirements = entities.get('requirements')
+        if requirements:
+            zakupka_data['requirements'] = self._sanitize_string(requirements)
+        
+        # Контактные данные
+        contact_person = entities.get('contact_person')
+        if contact_person:
+            zakupka_data['contact_person'] = self._sanitize_string(contact_person)
+        
+        contact_phone = entities.get('contact_phone') or entities.get('phone')
+        if contact_phone:
+            zakupka_data['contact_phone'] = self._sanitize_string(contact_phone)
+        
+        contact_email = entities.get('contact_email') or entities.get('email')
+        if contact_email:
+            zakupka_data['contact_email'] = self._sanitize_string(contact_email)
+        
+        # Адрес поставки
+        delivery_address = entities.get('delivery_address') or entities.get('address')
+        if delivery_address:
+            zakupka_data['delivery_address'] = self._sanitize_string(delivery_address)
+        
+        # Условия поставки
+        delivery_terms = entities.get('delivery_terms')
+        if delivery_terms:
+            zakupka_data['delivery_terms'] = self._sanitize_string(delivery_terms)
+        
+        # Даты
+        zakupka_data['procurement_date'] = datetime.now()
+        zakupka_data['deadline_date'] = datetime.now() + timedelta(days=14)  # 2 недели на подачу заявок
+        
+        return zakupka_data
+    
     def _extract_search_params(self, entities: Dict[str, Any], query: str) -> Dict[str, Any]:
         """Извлечение параметров поиска из сущностей."""
         params = {}
@@ -394,6 +499,11 @@ class IntentHandlers:
         """Проверка обязательных полей компании."""
         required_fields = ['name', 'inn']
         return [field for field in required_fields if not company_data.get(field)]
+    
+    def _validate_zakupka_data(self, zakupka_data: Dict[str, Any]) -> List[str]:
+        """Проверка обязательных полей закупки."""
+        required_fields = ['procurement_name', 'procurement_amount', 'customer_name', 'customer_inn']
+        return [field for field in required_fields if not zakupka_data.get(field)]
     
     async def _search_contracts_safe(self, params: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Безопасный поиск контрактов с обработкой ошибок."""

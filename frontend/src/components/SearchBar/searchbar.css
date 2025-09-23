@@ -31,6 +31,30 @@
   box-shadow: 0 0 0 3px rgba(122, 122, 255, 0.15);
 }
 
+.searchbar__input--highlighted {
+  border-color: #ff7a7a !important;
+  box-shadow: 0 0 0 3px rgba(255, 122, 122, 0.25) !important;
+  animation: searchbar-highlight 0.6s ease-out;
+}
+
+@keyframes searchbar-highlight {
+  0% {
+    border-color: #ff7a7a;
+    box-shadow: 0 0 0 3px rgba(255, 122, 122, 0.4);
+    transform: scale(1.02);
+  }
+  50% {
+    border-color: #ff9a9a;
+    box-shadow: 0 0 0 6px rgba(255, 122, 122, 0.3);
+    transform: scale(1.02);
+  }
+  100% {
+    border-color: #ff7a7a;
+    box-shadow: 0 0 0 3px rgba(255, 122, 122, 0.25);
+    transform: scale(1);
+  }
+}
+
 .searchbar__create,
 .searchbar__go {
   width: 44px;

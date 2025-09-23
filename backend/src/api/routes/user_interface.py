@@ -121,7 +121,6 @@ async def register_routes(app, **kwargs):
             # Валидация и очистка запроса
             query = Utils.validate_search_query(query, logger=logger)
             
-            # Получение предсказания от ML модели
             ml_result = await model_interface.predict(query, detailed=detailed)
             
             # Формирование ответа ML данных

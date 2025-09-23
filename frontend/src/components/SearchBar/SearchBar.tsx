@@ -8,6 +8,7 @@ type Props = {
   placeholder?: string;
   onSearch: (q: string) => void | Promise<void>;
   onCreate: () => void;
+  highlighted?: boolean;
 };
 
 function lastToken(s: string) {
@@ -16,7 +17,7 @@ function lastToken(s: string) {
   return parts[parts.length - 1] ?? '';
 }
 
-export default function SearchBar({ placeholder = 'Поиск…', onSearch, onCreate }: Props) {
+export default function SearchBar({ placeholder = 'Поиск…', onSearch, onCreate, highlighted = false }: Props) {
   const [q, setQ] = useState('');
   const [suggests, setSuggests] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
@@ -106,7 +107,7 @@ export default function SearchBar({ placeholder = 'Поиск…', onSearch, onC
         </button>
 
         <input
-          className="searchbar__input"
+          className={`searchbar__input ${highlighted ? 'searchbar__input--highlighted' : ''}`}
           placeholder={placeholder}
           value={q}
           onChange={(e) => setQ(e.target.value)}
