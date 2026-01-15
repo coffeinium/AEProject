@@ -9,7 +9,7 @@
 ### Команда AEternum Team
 
 - **Оксана** - Менеджер проекта, TeamLead
-- **Валерий** (rootperemotka) - Fullstack, ML-Engineer, капитан команды
+- **Валерий** (coffeinium) - Fullstack, ML-Engineer, капитан команды
 - **Олег** (Oleg4311) - Frontend разработчик, Оратор
 - **Владимир** - ML-Engineer
 
